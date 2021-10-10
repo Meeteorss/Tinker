@@ -1,0 +1,1 @@
+{"data":{"propertyOrder":{},"properties":{},"props":[],"primaryKeys":[],"filters":{},"hooks":{},"indexes":[],"uniques":[],"className":"User","path":"./dist/entities/user.js","abstract":true,"constructorParams":[],"toJsonParams":[],"useCache":true,"relations":[]},"origin":"./dist/entities/user.js","hash":"6ff0ec9d03142d523ceefef00920d9eb","version":"4.5.9"}
