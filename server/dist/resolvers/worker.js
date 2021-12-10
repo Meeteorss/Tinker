@@ -11,19 +11,14 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WorkerResolver = exports.WorkerRegisterInput = void 0;
 require("reflect-metadata");
 const user_1 = require("../entities/user");
 const worker_1 = require("../entities/worker");
 const type_graphql_1 = require("type-graphql");
-const argon2_1 = __importDefault(require("argon2"));
-const constants_1 = require("../constants");
 const user_2 = require("./user");
-const typeorm_1 = require("typeorm");
+const validateWorkerRegister_1 = require("../utils/validateWorkerRegister");
 let WorkerResponse = class WorkerResponse {
 };
 __decorate([
@@ -54,234 +49,35 @@ __decorate([
 __decorate([
     (0, type_graphql_1.Field)(),
     __metadata("design:type", String)
-], WorkerRegisterInput.prototype, "job", void 0);
+], WorkerRegisterInput.prototype, "sexe", void 0);
+__decorate([
+    (0, type_graphql_1.Field)(),
+    __metadata("design:type", Date)
+], WorkerRegisterInput.prototype, "dateOfBirth", void 0);
 __decorate([
     (0, type_graphql_1.Field)(),
     __metadata("design:type", String)
-], WorkerRegisterInput.prototype, "title", void 0);
-__decorate([
-    (0, type_graphql_1.Field)(),
-    __metadata("design:type", String)
-], WorkerRegisterInput.prototype, "jobDescription", void 0);
-__decorate([
-    (0, type_graphql_1.Field)(),
-    __metadata("design:type", String)
-], WorkerRegisterInput.prototype, "price", void 0);
-__decorate([
-    (0, type_graphql_1.Field)(),
-    __metadata("design:type", String)
-], WorkerRegisterInput.prototype, "duration", void 0);
+], WorkerRegisterInput.prototype, "description", void 0);
 WorkerRegisterInput = __decorate([
     (0, type_graphql_1.InputType)()
 ], WorkerRegisterInput);
 exports.WorkerRegisterInput = WorkerRegisterInput;
 let WorkerResolver = class WorkerResolver {
-    async workers(option) {
-        const workers = worker_1.Worker.find({
-            where: {
-                job: option,
-            },
-        });
-        return workers;
+    async age(parent) {
+        const age = new Date().getFullYear() - parent.dateOfBirth.getFullYear();
+        return age;
     }
-    async search(category, city, keyword, orderBy, limit, skip) {
-        if (orderBy == "" || orderBy == "rating") {
-            if (category == "" && city == "") {
-                const workers = await worker_1.Worker.find({
-                    where: {
-                        jobDescription: (0, typeorm_1.Like)(`%${keyword}%`),
-                    },
-                    order: {
-                        rating: "DESC",
-                    },
-                    take: limit,
-                    skip: skip,
-                });
-                return workers;
-            }
-            if (city == "") {
-                const workers = await worker_1.Worker.find({
-                    where: {
-                        job: category,
-                        jobDescription: (0, typeorm_1.Like)(`%${keyword}%`),
-                    },
-                    order: {
-                        rating: "DESC",
-                    },
-                    take: limit,
-                    skip: skip,
-                });
-                return workers;
-            }
-            if (category == "" && keyword == "") {
-                const workers = await worker_1.Worker.find({
-                    where: {
-                        city: city,
-                    },
-                    order: {
-                        rating: "DESC",
-                    },
-                    take: limit,
-                    skip: skip,
-                });
-                return workers;
-            }
-            if (keyword == "") {
-                const workers = await worker_1.Worker.find({
-                    where: {
-                        job: category,
-                        city: city,
-                    },
-                    order: {
-                        rating: "DESC",
-                    },
-                    take: limit,
-                    skip: skip,
-                });
-                return workers;
-            }
-            if (city == "" && keyword == "") {
-                const workers = await worker_1.Worker.find({
-                    where: {
-                        job: category,
-                    },
-                    order: {
-                        rating: "DESC",
-                    },
-                    take: limit,
-                    skip: skip,
-                });
-                return workers;
-            }
-            if (category == "") {
-                const workers = await worker_1.Worker.find({
-                    where: {
-                        city: city,
-                        jobDescription: (0, typeorm_1.Like)(`%${keyword}%`),
-                    },
-                    order: {
-                        rating: "DESC",
-                    },
-                    take: limit,
-                    skip: skip,
-                });
-                return workers;
-            }
-            if (category !== "" && city !== "" && keyword !== "") {
-                const workers = await worker_1.Worker.find({
-                    where: {
-                        job: category,
-                        city: city,
-                        jobDescription: (0, typeorm_1.Like)(`%${keyword}%`),
-                    },
-                    order: {
-                        rating: "DESC",
-                    },
-                    take: limit,
-                    skip: skip,
-                });
-                return workers;
-            }
+    async fullName(parent) {
+        const fullName = `${parent.firstName} ${parent.lastName}`;
+        return fullName;
+    }
+    async email(parent, { req }) {
+        if (req.session.userId) {
+            return parent.email;
         }
-        else if (orderBy == "pricing") {
-            if (category == "" && city == "") {
-                const workers = await worker_1.Worker.find({
-                    where: {
-                        jobDescription: (0, typeorm_1.Like)(`%${keyword}%`),
-                    },
-                    order: {
-                        price: "DESC",
-                    },
-                    take: limit,
-                    skip: skip,
-                });
-                return workers;
-            }
-            if (city == "") {
-                const workers = await worker_1.Worker.find({
-                    where: {
-                        job: category,
-                        jobDescription: (0, typeorm_1.Like)(`%${keyword}%`),
-                    },
-                    order: {
-                        price: "DESC",
-                    },
-                    take: limit,
-                    skip: skip,
-                });
-                return workers;
-            }
-            if (category == "" && keyword == "") {
-                const workers = await worker_1.Worker.find({
-                    where: {
-                        city: city,
-                    },
-                    order: {
-                        price: "DESC",
-                    },
-                    take: limit,
-                    skip: skip,
-                });
-                return workers;
-            }
-            if (keyword == "") {
-                const workers = await worker_1.Worker.find({
-                    where: {
-                        job: category,
-                        city: city,
-                    },
-                    order: {
-                        price: "DESC",
-                    },
-                    take: limit,
-                    skip: skip,
-                });
-                return workers;
-            }
-            if (city == "" && keyword == "") {
-                const workers = await worker_1.Worker.find({
-                    where: {
-                        job: category,
-                    },
-                    order: {
-                        price: "DESC",
-                    },
-                    take: limit,
-                    skip: skip,
-                });
-                return workers;
-            }
-            if (category == "") {
-                const workers = await worker_1.Worker.find({
-                    where: {
-                        city: city,
-                        jobDescription: (0, typeorm_1.Like)(`%${keyword}%`),
-                    },
-                    order: {
-                        price: "DESC",
-                    },
-                    take: limit,
-                    skip: skip,
-                });
-                return workers;
-            }
-            if (category !== "" && city !== "" && keyword !== "") {
-                const workers = await worker_1.Worker.find({
-                    where: {
-                        job: category,
-                        city: city,
-                        jobDescription: (0, typeorm_1.Like)(`%${keyword}%`),
-                    },
-                    order: {
-                        price: "DESC",
-                    },
-                    take: limit,
-                    skip: skip,
-                });
-                return workers;
-            }
+        else {
+            return "";
         }
-        return [];
     }
     async workerById(id) {
         const worker = await worker_1.Worker.findOne({
@@ -289,28 +85,42 @@ let WorkerResolver = class WorkerResolver {
                 id: id,
             },
         });
+        if (!worker) {
+            return null;
+        }
         return worker;
     }
-    async list(option) {
-        const workers = worker_1.Worker.find({
+    async workerByUsername(username) {
+        const worker = await worker_1.Worker.findOne({
             where: {
-                job: option,
-            },
-            order: {
-                id: "ASC",
+                userName: username,
             },
         });
-        return workers;
+        if (!worker) {
+            return null;
+        }
+        return worker;
     }
-    async isWorker({ req }) {
-        const user = await user_1.User.findOne({
-            id: req.session.userId,
-        });
-        if (user.isWorker) {
-            return true;
+    async isWorker(userId, { req }) {
+        if (userId) {
+            const user = await user_1.User.findOne({ id: userId });
+            if (user === null || user === void 0 ? void 0 : user.isWorker) {
+                return true;
+            }
+            else {
+                return false;
+            }
         }
         else {
-            return false;
+            const user = await user_1.User.findOne({
+                id: req.session.userId,
+            });
+            if (user.isWorker) {
+                return true;
+            }
+            else {
+                return false;
+            }
         }
     }
     async registerWorker(options, { req }) {
@@ -320,89 +130,40 @@ let WorkerResolver = class WorkerResolver {
         const user = await user_1.User.findOne({
             id: req.session.userId,
         });
-        if (!(options.job in worker_1.JobCategory)) {
-            return {
-                errors: [
-                    {
-                        field: "job",
-                        message: "invalid job",
-                    },
-                ],
-            };
-        }
-        if (!(options.duration in worker_1.Duration)) {
-            return {
-                errors: [
-                    {
-                        field: "duration",
-                        message: "invalid duration",
-                    },
-                ],
-            };
+        const errors = (0, validateWorkerRegister_1.validateWorkerRegister)(options);
+        if (errors) {
+            return { errors };
         }
         if (!user) {
             throw new Error("not authenticated");
         }
+        if (!user.confirmed) {
+            throw new Error("Confirm email first");
+        }
         user.isWorker = true;
         await user_1.User.save(user);
+        let profilePicture = "";
+        if (user.profilePicture != null) {
+            profilePicture = user.profilePicture;
+        }
         const worker = worker_1.Worker.create({
             id: user.id,
             firstName: user.firstName,
             lastName: user.lastName,
+            userName: user.userName,
             email: user.email,
             password: user.password,
             phone: options.phone,
             city: options.city,
-            job: options.job,
-            jobDescription: options.jobDescription,
-            price: parseInt(options.price),
-            duration: options.duration,
+            sexe: options.sexe,
+            dateOfBirth: options.dateOfBirth,
+            description: options.description,
+            profilePicture: profilePicture,
         });
         await worker_1.Worker.save(worker);
         return {
             worker,
         };
-    }
-    async loginWorker(options, { req }) {
-        const worker = await worker_1.Worker.findOne({
-            email: options.email,
-        });
-        if (!worker) {
-            return {
-                errors: [
-                    {
-                        field: "email",
-                        message: "This worker doesn't exist",
-                    },
-                ],
-            };
-        }
-        const validPassword = await argon2_1.default.verify(worker.password, options.password);
-        if (!validPassword) {
-            return {
-                errors: [
-                    {
-                        field: "password",
-                        message: "Password incorrect",
-                    },
-                ],
-            };
-        }
-        req.session.userId = worker.id;
-        return {
-            worker,
-        };
-    }
-    logoutWorker({ req, res }) {
-        return new Promise((resolve) => req.session.destroy((err) => {
-            res.clearCookie(constants_1.COOKIE_NAME);
-            if (err) {
-                console.log(err);
-                resolve(false);
-                return;
-            }
-            resolve(true);
-        }));
     }
     async updateWorker(options, { req }) {
         if (!req.session.userId) {
@@ -411,80 +172,69 @@ let WorkerResolver = class WorkerResolver {
         const worker = await worker_1.Worker.findOne({
             id: req.session.userId,
         });
-        if (!(options.job in worker_1.JobCategory)) {
-            return {
-                errors: [
-                    {
-                        field: "job",
-                        message: "invalid job",
-                    },
-                ],
-            };
-        }
-        if (!(options.duration in worker_1.Duration)) {
-            return {
-                errors: [
-                    {
-                        field: "duration",
-                        message: "invalid duration",
-                    },
-                ],
-            };
+        const errors = (0, validateWorkerRegister_1.validateWorkerRegister)(options);
+        if (errors) {
+            return { errors };
         }
         if (!worker) {
             throw new Error("not authenticated");
         }
         worker.phone = options.phone;
         worker.city = options.city;
-        worker.job = options.job;
-        worker.title = options.title;
-        worker.jobDescription = options.jobDescription;
-        worker.price = parseInt(options.price);
-        worker.duration = options.duration;
+        worker.sexe = options.sexe;
+        worker.dateOfBirth = options.dateOfBirth;
+        worker.description = options.description;
         await worker_1.Worker.save(worker);
         return {
             worker,
         };
     }
+    async workers() {
+        return await worker_1.Worker.find({});
+    }
 };
 __decorate([
-    (0, type_graphql_1.Query)(() => [worker_1.Worker]),
-    __param(0, (0, type_graphql_1.Arg)("option")),
+    (0, type_graphql_1.FieldResolver)(),
+    __param(0, (0, type_graphql_1.Root)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [worker_1.Worker]),
     __metadata("design:returntype", Promise)
-], WorkerResolver.prototype, "workers", null);
+], WorkerResolver.prototype, "age", null);
 __decorate([
-    (0, type_graphql_1.Query)(() => [worker_1.Worker]),
-    __param(0, (0, type_graphql_1.Arg)("category", () => String)),
-    __param(1, (0, type_graphql_1.Arg)("city", () => String)),
-    __param(2, (0, type_graphql_1.Arg)("keyword", () => String)),
-    __param(3, (0, type_graphql_1.Arg)("orderBy", () => String)),
-    __param(4, (0, type_graphql_1.Arg)("limit", () => type_graphql_1.Int)),
-    __param(5, (0, type_graphql_1.Arg)("skip", () => type_graphql_1.Int)),
+    (0, type_graphql_1.FieldResolver)(),
+    __param(0, (0, type_graphql_1.Root)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object, Object, Object, Object, Object]),
+    __metadata("design:paramtypes", [worker_1.Worker]),
     __metadata("design:returntype", Promise)
-], WorkerResolver.prototype, "search", null);
+], WorkerResolver.prototype, "fullName", null);
 __decorate([
-    (0, type_graphql_1.Query)(() => worker_1.Worker),
+    (0, type_graphql_1.FieldResolver)(),
+    __param(0, (0, type_graphql_1.Root)()),
+    __param(1, (0, type_graphql_1.Ctx)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [worker_1.Worker, Object]),
+    __metadata("design:returntype", Promise)
+], WorkerResolver.prototype, "email", null);
+__decorate([
+    (0, type_graphql_1.Query)(() => worker_1.Worker, { nullable: true }),
     __param(0, (0, type_graphql_1.Arg)("id")),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], WorkerResolver.prototype, "workerById", null);
 __decorate([
-    (0, type_graphql_1.Mutation)(() => [worker_1.Worker]),
-    __param(0, (0, type_graphql_1.Arg)("option")),
+    (0, type_graphql_1.Query)(() => worker_1.Worker, { nullable: true }),
+    __param(0, (0, type_graphql_1.Arg)("username")),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
-], WorkerResolver.prototype, "list", null);
+], WorkerResolver.prototype, "workerByUsername", null);
 __decorate([
     (0, type_graphql_1.Query)(() => Boolean),
-    __param(0, (0, type_graphql_1.Ctx)()),
+    __param(0, (0, type_graphql_1.Arg)("userId")),
+    __param(1, (0, type_graphql_1.Ctx)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], WorkerResolver.prototype, "isWorker", null);
 __decorate([
@@ -500,24 +250,15 @@ __decorate([
     __param(0, (0, type_graphql_1.Arg)("options")),
     __param(1, (0, type_graphql_1.Ctx)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [user_2.LoginInput, Object]),
-    __metadata("design:returntype", Promise)
-], WorkerResolver.prototype, "loginWorker", null);
-__decorate([
-    (0, type_graphql_1.Mutation)(() => Boolean),
-    __param(0, (0, type_graphql_1.Ctx)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
-], WorkerResolver.prototype, "logoutWorker", null);
-__decorate([
-    (0, type_graphql_1.Mutation)(() => WorkerResponse),
-    __param(0, (0, type_graphql_1.Arg)("options")),
-    __param(1, (0, type_graphql_1.Ctx)()),
-    __metadata("design:type", Function),
     __metadata("design:paramtypes", [WorkerRegisterInput, Object]),
     __metadata("design:returntype", Promise)
 ], WorkerResolver.prototype, "updateWorker", null);
+__decorate([
+    (0, type_graphql_1.Query)(() => [worker_1.Worker]),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], WorkerResolver.prototype, "workers", null);
 WorkerResolver = __decorate([
     (0, type_graphql_1.Resolver)(worker_1.Worker)
 ], WorkerResolver);

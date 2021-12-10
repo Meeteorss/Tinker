@@ -1,4 +1,4 @@
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { s3 } from "../utils/s3";
 import {
   Arg,
@@ -12,6 +12,8 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { MyContext } from "src/types";
 import { Worker } from "../entities/worker";
+import { Skill } from "../entities/skill";
+import { User } from "../entities/user";
 
 const bucketName = process.env.AWS_BUCKET_NAME as string;
 
@@ -41,10 +43,10 @@ export class UploadResolver {
     @Arg("fileType", () => String) fileType: string,
     @Ctx() { req }: MyContext
   ) {
-    const worker = await Worker.findOne({
+    const user = await User.findOne({
       id: req.session.userId,
     });
-    if (!worker) {
+    if (!user) {
       return {
         error: "Not authenticated",
       };
@@ -75,31 +77,80 @@ export class UploadResolver {
     // @Arg("workerId", () => String) workerId:string,
     @Ctx() { req }: MyContext
   ) {
-    const worker = await Worker.findOne({
+    const user = await User.findOne({
       id: req.session.userId,
     });
-    if (!worker) {
+    if (!user) {
       return false;
     }
-    worker.profilePicture = pictureUrl;
-    await Worker.save(worker);
-    return true;
+    if (user.isWorker) {
+      user.profilePicture = pictureUrl;
+      await Worker.update(
+        { id: req.session.userId },
+        { profilePicture: pictureUrl }
+      );
+      await User.save(user);
+      return true;
+    } else {
+      user.profilePicture = pictureUrl;
+      await User.save(user);
+      return true;
+    }
+  }
+
+  @Mutation(() => Boolean)
+  async deleteProfilePicture(@Ctx() { req }: MyContext) {
+    const user = await User.findOne({ id: req.session.userId });
+
+    if (!user) {
+      return false;
+    }
+
+    const s3Params = {
+      Bucket: bucketName,
+      Key: `${user.profilePicture.split(".com/")[1]}`,
+    };
+    await s3.send(new DeleteObjectCommand(s3Params));
+
+    if (user.isWorker) {
+      user.profilePicture = "";
+      await User.save(user);
+      await Worker.update({ id: req.session.userId }, { profilePicture: "" });
+      return true;
+    } else {
+      user.profilePicture = "";
+      await User.save(user);
+      return true;
+    }
   }
 
   @Mutation(() => S3SignResponse)
   async uploadPicture(
     @Arg("fileName", () => String) fileName: string,
     @Arg("fileType", () => String) fileType: string,
+    @Arg("skillId", () => String) skillId: string,
     @Ctx() { req }: MyContext
   ) {
     const worker = await Worker.findOne({
       id: req.session.userId,
     });
+    const skill = await Skill.findOne({ id: skillId });
+    if (!skill) {
+      return {
+        error: "Skill not found",
+      };
+    }
     if (!worker) {
       return {
         error: "Not authenticated",
       };
-    } else if (worker.pictures?.length > 4) {
+    }
+    if (skill.workerId != req.session.userId) {
+      return {
+        error: "You don't have permissions for this action",
+      };
+    }
+    if (skill.pictures?.length > 4) {
       return {
         error: "you can't upload more than 4 pictures",
       };
@@ -113,7 +164,7 @@ export class UploadResolver {
     await s3.send(new PutObjectCommand(s3Params));
 
     const signedS3Url = await getSignedUrl(s3, new PutObjectCommand(s3Params), {
-      expiresIn: 50000,
+      expiresIn: 5000,
     });
 
     const objectUrl = `https://${bucketName}.s3.amazonaws.com/publicPics/${fileName}`;
@@ -128,40 +179,55 @@ export class UploadResolver {
   @Mutation(() => Boolean)
   async addPicture(
     @Arg("pictureUrl", () => String) pictureUrl: string,
+    @Arg("skillId", () => String) skillId: string,
     @Arg("index", () => Int) index: number,
     @Ctx() { req }: MyContext
   ) {
     const worker = await Worker.findOne({
       id: req.session.userId,
     });
+    const skill = await Skill.findOne({ id: skillId });
 
     if (!worker) {
       return false;
     }
+    if (!skill) {
+      return false;
+    }
 
-    worker.pictures[index] = pictureUrl;
+    skill.pictures[index] = pictureUrl;
 
-    await Worker.save(worker);
+    await Skill.save(skill);
     return true;
   }
 
   @Mutation(() => Boolean)
   async deletePicture(
     @Arg("index", () => Int) index: number,
+    @Arg("skillId", () => String) skillId: string,
     @Ctx() { req }: MyContext
   ) {
     const worker = await Worker.findOne({
       id: req.session.userId,
     });
+    const skill = await Skill.findOne({ id: skillId });
 
     if (!worker) {
       return false;
     }
+    if (!skill) {
+      return false;
+    }
 
-    worker.pictures[index] = "";
-    worker.pictures.splice(4, 1);
+    const s3Params = {
+      Bucket: bucketName,
+      Key: `${skill.pictures[index].split(".com/")[1]}`,
+    };
+    await s3.send(new DeleteObjectCommand(s3Params));
 
-    await Worker.save(worker);
+    skill.pictures[index] = "";
+
+    await Skill.save(skill);
     return true;
   }
 }

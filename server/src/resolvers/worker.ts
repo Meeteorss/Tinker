@@ -1,24 +1,24 @@
 //import { MyContext } from "src/types";
 import "reflect-metadata";
 import { User } from "../entities/user";
-import { Duration, JobCategory, Worker } from "../entities/worker";
+import { Worker } from "../entities/worker";
 import {
   Arg,
   Ctx,
   Field,
+  FieldResolver,
   InputType,
-  Int,
   Mutation,
   ObjectType,
   Query,
   Resolver,
+  Root,
 } from "type-graphql";
-import argon2 from "argon2";
 import { MyContext } from "src/types";
 
-import { COOKIE_NAME, ___prod___ } from "../constants";
-import { ErrorField, LoginInput } from "./user";
-import { Like } from "typeorm";
+import { ___prod___ } from "../constants";
+import { ErrorField } from "./user";
+import { validateWorkerRegister } from "../utils/validateWorkerRegister";
 
 @ObjectType()
 class WorkerResponse {
@@ -41,273 +41,86 @@ export class WorkerRegisterInput {
   city: string;
 
   @Field()
-  job: string;
+  sexe: string;
 
   @Field()
-  title: string;
+  dateOfBirth: Date;
 
   @Field()
-  jobDescription: string;
-
-  @Field()
-  price: string;
-
-  @Field()
-  duration: string;
+  description: string;
 }
 
 @Resolver(Worker)
 export class WorkerResolver {
-  @Query(() => [Worker])
-  async workers(@Arg("option") option: string): Promise<Worker[]> {
-    const workers = Worker.find({
-      where: {
-        job: option,
-      },
-    });
-    return workers;
+  @FieldResolver()
+  async age(@Root() parent: Worker) {
+    const age = new Date().getFullYear() - parent.dateOfBirth.getFullYear();
+    return age;
   }
 
-  @Query(() => [Worker])
-  async search(
-    @Arg("category", () => String) category: string | null,
-    @Arg("city", () => String) city: string | null,
-    @Arg("keyword", () => String) keyword: string | null,
-    @Arg("orderBy", () => String) orderBy: string | null,
-    @Arg("limit", () => Int) limit: number | undefined,
-    @Arg("skip", () => Int) skip: number | undefined
-  ): Promise<Worker[]> {
-    if (orderBy == "" || orderBy == "rating") {
-      if (category == "" && city == "") {
-        const workers = await Worker.find({
-          where: {
-            jobDescription: Like(`%${keyword}%`),
-          },
-          order: {
-            rating: "DESC",
-          },
-          take: limit,
-          skip: skip,
-        });
-        return workers;
-      }
-      if (city == "") {
-        const workers = await Worker.find({
-          where: {
-            job: category,
-            jobDescription: Like(`%${keyword}%`),
-          },
-          order: {
-            rating: "DESC",
-          },
-          take: limit,
-          skip: skip,
-        });
-        return workers;
-      }
-      if (category == "" && keyword == "") {
-        const workers = await Worker.find({
-          where: {
-            city: city,
-          },
-          order: {
-            rating: "DESC",
-          },
-          take: limit,
-          skip: skip,
-        });
-        return workers;
-      }
-      if (keyword == "") {
-        const workers = await Worker.find({
-          where: {
-            job: category,
-            city: city,
-          },
-          order: {
-            rating: "DESC",
-          },
-          take: limit,
-          skip: skip,
-        });
-        return workers;
-      }
-      if (city == "" && keyword == "") {
-        const workers = await Worker.find({
-          where: {
-            job: category,
-          },
-          order: {
-            rating: "DESC",
-          },
-          take: limit,
-          skip: skip,
-        });
-        return workers;
-      }
-      if (category == "") {
-        const workers = await Worker.find({
-          where: {
-            city: city,
-            jobDescription: Like(`%${keyword}%`),
-          },
-          order: {
-            rating: "DESC",
-          },
-          take: limit,
-          skip: skip,
-        });
-        return workers;
-      }
-      if (category !== "" && city !== "" && keyword !== "") {
-        const workers = await Worker.find({
-          where: {
-            job: category,
-            city: city,
-            jobDescription: Like(`%${keyword}%`),
-          },
-          order: {
-            rating: "DESC",
-          },
-          take: limit,
-          skip: skip,
-        });
-        return workers;
-      }
-    } else if (orderBy == "pricing") {
-      if (category == "" && city == "") {
-        const workers = await Worker.find({
-          where: {
-            jobDescription: Like(`%${keyword}%`),
-          },
-          order: {
-            price: "DESC",
-          },
-          take: limit,
-          skip: skip,
-        });
-        return workers;
-      }
-      if (city == "") {
-        const workers = await Worker.find({
-          where: {
-            job: category,
-            jobDescription: Like(`%${keyword}%`),
-          },
-          order: {
-            price: "DESC",
-          },
-          take: limit,
-          skip: skip,
-        });
-        return workers;
-      }
-      if (category == "" && keyword == "") {
-        const workers = await Worker.find({
-          where: {
-            city: city,
-          },
-          order: {
-            price: "DESC",
-          },
-          take: limit,
-          skip: skip,
-        });
-        return workers;
-      }
-      if (keyword == "") {
-        const workers = await Worker.find({
-          where: {
-            job: category,
-            city: city,
-          },
-          order: {
-            price: "DESC",
-          },
-          take: limit,
-          skip: skip,
-        });
-        return workers;
-      }
-      if (city == "" && keyword == "") {
-        const workers = await Worker.find({
-          where: {
-            job: category,
-          },
-          order: {
-            price: "DESC",
-          },
-          take: limit,
-          skip: skip,
-        });
-        return workers;
-      }
-      if (category == "") {
-        const workers = await Worker.find({
-          where: {
-            city: city,
-            jobDescription: Like(`%${keyword}%`),
-          },
-          order: {
-            price: "DESC",
-          },
-          take: limit,
-          skip: skip,
-        });
-        return workers;
-      }
-      if (category !== "" && city !== "" && keyword !== "") {
-        const workers = await Worker.find({
-          where: {
-            job: category,
-            city: city,
-            jobDescription: Like(`%${keyword}%`),
-          },
-          order: {
-            price: "DESC",
-          },
-          take: limit,
-          skip: skip,
-        });
-        return workers;
-      }
+  @FieldResolver()
+  async fullName(@Root() parent: Worker) {
+    const fullName = `${parent.firstName} ${parent.lastName}`;
+    return fullName;
+  }
+
+  @FieldResolver()
+  async email(@Root() parent: Worker, @Ctx() { req }: MyContext) {
+    if (req.session.userId) {
+      return parent.email;
+    } else {
+      return "";
     }
-
-    return [];
   }
 
-  @Query(() => Worker)
-  async workerById(@Arg("id") id: string): Promise<Worker> {
+  @Query(() => Worker, { nullable: true })
+  async workerById(@Arg("id") id: string) {
     const worker = await Worker.findOne({
       where: {
         id: id,
       },
     });
-    return worker!;
+    if (!worker) {
+      return null;
+    }
+    return worker;
   }
 
-  @Mutation(() => [Worker])
-  async list(@Arg("option") option: string): Promise<Worker[]> {
-    const workers = Worker.find({
+  @Query(() => Worker, { nullable: true })
+  async workerByUsername(@Arg("username") username: string) {
+    const worker = await Worker.findOne({
       where: {
-        job: option,
-      },
-      order: {
-        id: "ASC",
+        userName: username,
       },
     });
-    return workers;
+    if (!worker) {
+      return null;
+    }
+
+    return worker;
   }
 
   @Query(() => Boolean)
-  async isWorker(@Ctx() { req }: MyContext) {
-    const user = await User.findOne({
-      id: req.session.userId,
-    });
-    if (user!.isWorker) {
-      return true;
+  async isWorker(
+    @Arg("userId") userId: string,
+    @Ctx() { req }: MyContext
+  ): Promise<Boolean> {
+    if (userId) {
+      const user = await User.findOne({ id: userId });
+      if (user?.isWorker) {
+        return true;
+      } else {
+        return false;
+      }
     } else {
-      return false;
+      const user = await User.findOne({
+        id: req.session.userId,
+      });
+      if (user!.isWorker) {
+        return true;
+      } else {
+        return false;
+      }
     }
   }
 
@@ -322,105 +135,42 @@ export class WorkerResolver {
     const user = await User.findOne({
       id: req.session.userId,
     });
-    if (!(options.job in JobCategory)) {
-      return {
-        errors: [
-          {
-            field: "job",
-            message: "invalid job",
-          },
-        ],
-      };
-    }
-    if (!(options.duration in Duration)) {
-      return {
-        errors: [
-          {
-            field: "duration",
-            message: "invalid duration",
-          },
-        ],
-      };
+    const errors = validateWorkerRegister(options);
+    if (errors) {
+      return { errors };
     }
     if (!user) {
       throw new Error("not authenticated");
     }
+    if (!user.confirmed) {
+      throw new Error("Confirm email first");
+    }
 
     user.isWorker = true;
     await User.save(user);
+    let profilePicture = "";
+    if (user.profilePicture != null) {
+      profilePicture = user.profilePicture;
+    }
+
     const worker = Worker.create({
-      id: user!.id,
-      firstName: user!.firstName,
-      lastName: user!.lastName,
-      email: user!.email,
-      password: user!.password,
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      userName: user.userName,
+      email: user.email,
+      password: user.password,
       phone: options.phone,
       city: options.city,
-      job: options.job,
-      jobDescription: options.jobDescription,
-      price: parseInt(options.price),
-      duration: options.duration,
+      sexe: options.sexe,
+      dateOfBirth: options.dateOfBirth,
+      description: options.description,
+      profilePicture: profilePicture,
     });
     await Worker.save(worker);
     return {
       worker,
     };
-  }
-
-  @Mutation(() => WorkerResponse)
-  async loginWorker(
-    @Arg("options") options: LoginInput,
-    @Ctx() { req }: MyContext
-  ): Promise<WorkerResponse> {
-    const worker = await Worker.findOne({
-      email: options.email,
-    });
-
-    if (!worker) {
-      return {
-        errors: [
-          {
-            field: "email",
-            message: "This worker doesn't exist",
-          },
-        ],
-      };
-    }
-    const validPassword = await argon2.verify(
-      worker.password,
-      options.password
-    );
-    if (!validPassword) {
-      return {
-        errors: [
-          {
-            field: "password",
-            message: "Password incorrect",
-          },
-        ],
-      };
-    }
-
-    req.session.userId = worker.id;
-
-    return {
-      worker,
-    };
-  }
-
-  @Mutation(() => Boolean)
-  logoutWorker(@Ctx() { req, res }: MyContext) {
-    return new Promise((resolve) =>
-      req.session.destroy((err) => {
-        res.clearCookie(COOKIE_NAME);
-        if (err) {
-          console.log(err);
-          resolve(false);
-          return;
-        }
-        resolve(true);
-      })
-    );
   }
 
   @Mutation(() => WorkerResponse)
@@ -434,40 +184,27 @@ export class WorkerResolver {
     const worker = await Worker.findOne({
       id: req.session.userId,
     });
-    if (!(options.job in JobCategory)) {
-      return {
-        errors: [
-          {
-            field: "job",
-            message: "invalid job",
-          },
-        ],
-      };
-    }
-    if (!(options.duration in Duration)) {
-      return {
-        errors: [
-          {
-            field: "duration",
-            message: "invalid duration",
-          },
-        ],
-      };
+    const errors = validateWorkerRegister(options);
+    if (errors) {
+      return { errors };
     }
     if (!worker) {
       throw new Error("not authenticated");
     }
     worker.phone = options.phone;
     worker.city = options.city;
-    worker.job = options.job;
-    worker.title = options.title;
-    worker.jobDescription = options.jobDescription;
-    worker.price = parseInt(options.price);
-    worker.duration = options.duration;
+    worker.sexe = options.sexe;
+    worker.dateOfBirth = options.dateOfBirth;
+    worker.description = options.description;
 
     await Worker.save(worker);
     return {
       worker,
     };
+  }
+
+  @Query(() => [Worker])
+  async workers() {
+    return await Worker.find({});
   }
 }

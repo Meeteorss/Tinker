@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateRegister = void 0;
+exports.validateRegister = exports.validateEmail = void 0;
 const validateEmail = (value) => {
     if (!value) {
         return false;
@@ -10,12 +10,13 @@ const validateEmail = (value) => {
     }
     return true;
 };
+exports.validateEmail = validateEmail;
 const validateRegister = (options) => {
-    if (!validateEmail(options.email)) {
+    if (!(0, exports.validateEmail)(options.email)) {
         return [
             {
                 field: "email",
-                message: "invalid email",
+                message: "Adresse email invalide",
             },
         ];
     }
@@ -23,7 +24,7 @@ const validateRegister = (options) => {
         return [
             {
                 field: "firstName",
-                message: "length must between 3 and 20 character",
+                message: "Prénom doit être entre 3 et 20 caractères",
             },
         ];
     }
@@ -31,7 +32,7 @@ const validateRegister = (options) => {
         return [
             {
                 field: "firstName",
-                message: "Cannot include a symbol or number",
+                message: "Prénom ne doit pas contenir un chiffre ou un symbole",
             },
         ];
     }
@@ -39,7 +40,7 @@ const validateRegister = (options) => {
         return [
             {
                 field: "lastName",
-                message: "length must between 3 and 20 character",
+                message: "Nom doit être entre 3 et 20 caractères",
             },
         ];
     }
@@ -47,15 +48,39 @@ const validateRegister = (options) => {
         return [
             {
                 field: "lastName",
-                message: "Cannot include a symbol or number",
+                message: "Nom ne doit pas contenir un chiffre ou un symbole",
             },
         ];
     }
-    if (options.password.length <= 2) {
+    if (options.userName.length <= 2 || options.firstName.length >= 21) {
+        return [
+            {
+                field: "userName",
+                message: "Nom d'utilisateur doit être entre 3 et 20 caractères",
+            },
+        ];
+    }
+    if (!/^[A-Za-z0-9]+$/.test(options.userName)) {
+        return [
+            {
+                field: "userName",
+                message: "Nom d'utilisateur ne doit pas contenir un symbole",
+            },
+        ];
+    }
+    if (options.password.length <= 4) {
         return [
             {
                 field: "password",
-                message: "length must be greater than 2",
+                message: "Mot de passe doit être au moins 5 caractères",
+            },
+        ];
+    }
+    if (options.confirmedPassword != options.password) {
+        return [
+            {
+                field: "confirmedPassword",
+                message: "Mots de passes non identiques",
             },
         ];
     }
