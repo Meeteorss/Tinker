@@ -11,6 +11,15 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -90,210 +99,230 @@ AdminLoginInput = __decorate([
     (0, type_graphql_1.InputType)()
 ], AdminLoginInput);
 let AdminResolver = class AdminResolver {
-    async getCurrentAdmin({ req }) {
-        if (!req.session.userId) {
-            return null;
-        }
-        const admin = await admin_1.Admin.findOne({
-            id: req.session.userId,
+    getCurrentAdmin({ req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
+                return null;
+            }
+            const admin = yield admin_1.Admin.findOne({
+                id: req.session.userId,
+            });
+            return admin;
         });
-        return admin;
     }
-    async addAdmin(options, { req }) {
-        if (!req.session.userId) {
-            return {
-                errors: [
-                    {
-                        field: "firstName",
-                        message: "Log in as a super-admin first",
-                    },
-                ],
-            };
-        }
-        const superAdmin = await admin_1.Admin.findOne({
-            where: { id: req.session.userId },
-        });
-        if (!superAdmin || superAdmin.role != "SUPER_ADMIN") {
-            return {
-                errors: [
-                    {
-                        field: "firstName",
-                        message: "Not authorized",
-                    },
-                ],
-            };
-        }
-        const errors = (0, validateRegister_1.validateRegister)(options);
-        if (errors) {
-            return { errors };
-        }
-        const hashedPassword = await argon2_1.default.hash(options.password);
-        const admin = admin_1.Admin.create({
-            firstName: options.firstName,
-            lastName: options.lastName,
-            username: options.userName,
-            email: options.email,
-            password: hashedPassword,
-            role: "ADMIN",
-        });
-        try {
-            await admin_1.Admin.save(admin);
-        }
-        catch (err) {
-            if (err.detail.includes("already exists") &&
-                err.detail.includes("email")) {
+    addAdmin(options, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
                 return {
                     errors: [
                         {
-                            field: "email",
-                            message: "Email already used",
+                            field: "firstName",
+                            message: "Log in as a super-admin first",
                         },
                     ],
                 };
             }
-            if (err.detail.includes("already exists") &&
-                err.detail.includes("userName")) {
+            const superAdmin = yield admin_1.Admin.findOne({
+                where: { id: req.session.userId },
+            });
+            if (!superAdmin || superAdmin.role != "SUPER_ADMIN") {
                 return {
                     errors: [
                         {
-                            field: "userName",
-                            message: "username already used",
+                            field: "firstName",
+                            message: "Not authorized",
                         },
                     ],
                 };
             }
-        }
-        req.session.userId = admin.id;
-        return {
-            admin,
-        };
-    }
-    async deleteAdmin(username, { req }) {
-        if (!req.session.userId) {
-            throw new Error("Log in as a super-admin first");
-        }
-        const superAdmin = await admin_1.Admin.findOne({
-            where: { id: req.session.userId, role: "SUPER_ADMIN" },
-        });
-        if (!superAdmin) {
-            throw new Error("Not authorized");
-        }
-        const admin = await admin_1.Admin.findOne({ username: username });
-        if (!admin) {
-            throw new Error("No admin with this username found");
-        }
-        await admin_1.Admin.delete({ username: username });
-    }
-    async deleteUserProfilePic(userId, { req }) {
-        if (!req.session.userId) {
-            throw new Error("Not authenticated");
-        }
-        const admin = await admin_1.Admin.findOne({ id: req.session.userId });
-        if (!admin) {
-            throw new Error("Admin required");
-        }
-        const user = await user_1.User.findOne({ id: userId });
-        if (!user) {
-            throw new Error("User does not exist");
-        }
-        if (user.isWorker) {
-            await worker_1.Worker.update({ id: userId }, { profilePicture: "" });
-            await skill_1.Skill.update({ workerId: userId }, { workerPicUrl: "" });
-        }
-        await user_1.User.update({ id: userId }, { profilePicture: "" });
-    }
-    async deleteSkillPics(skillId, { req }) {
-        if (!req.session.userId) {
-            throw new Error("Not authenticated");
-        }
-        const admin = await admin_1.Admin.findOne({ id: req.session.userId });
-        if (!admin) {
-            throw new Error("Admin required");
-        }
-        const skill = await skill_1.Skill.findOne({ id: skillId });
-        if (!skill) {
-            throw new Error("Skill does not exist");
-        }
-        await skill_1.Skill.update({ id: skillId }, { pictures: ["", "", "", ""] });
-        return true;
-    }
-    async hideSkill(skillId, { req }) {
-        if (!req.session.userId) {
-            throw new Error("Not authenticated");
-        }
-        const admin = await admin_1.Admin.findOne({ id: req.session.userId });
-        if (!admin) {
-            throw new Error("Admin required");
-        }
-        const skill = await skill_1.Skill.findOne({ id: skillId });
-        if (!skill) {
-            throw new Error("Skill does not exist");
-        }
-        await skill_1.Skill.update({ id: skillId }, { status: "Hidden" });
-        return true;
-    }
-    async getAllUsers({ req }) {
-        if (!req.session.userId) {
-            throw new Error("Not authenticated");
-        }
-        const admin = await admin_1.Admin.findOne({ id: req.session.userId });
-        if (!admin) {
-            throw new Error("Admin required");
-        }
-        const users = await user_1.User.find({});
-        return users;
-    }
-    async getAllWorkers({ req }) {
-        if (!req.session.userId) {
-            throw new Error("Not authenticated");
-        }
-        const admin = await admin_1.Admin.findOne({ id: req.session.userId });
-        if (!admin) {
-            throw new Error("Admin required");
-        }
-        const workers = await worker_1.Worker.find({});
-        return workers;
-    }
-    async getAllSkills({ req }) {
-        if (!req.session.userId) {
-            throw new Error("Not authenticated");
-        }
-        const admin = await admin_1.Admin.findOne({ id: req.session.userId });
-        if (!admin) {
-            throw new Error("Admin required");
-        }
-        const skills = await skill_1.Skill.find({});
-        return skills;
-    }
-    async adminLogin(options, { req }) {
-        const admin = await admin_1.Admin.findOne({
-            where: [{ username: options.username }],
-        });
-        if (!admin) {
+            const errors = (0, validateRegister_1.validateRegister)(options);
+            if (errors) {
+                return { errors };
+            }
+            const hashedPassword = yield argon2_1.default.hash(options.password);
+            const admin = admin_1.Admin.create({
+                firstName: options.firstName,
+                lastName: options.lastName,
+                username: options.userName,
+                email: options.email,
+                password: hashedPassword,
+                role: "ADMIN",
+            });
+            try {
+                yield admin_1.Admin.save(admin);
+            }
+            catch (err) {
+                if (err.detail.includes("already exists") &&
+                    err.detail.includes("email")) {
+                    return {
+                        errors: [
+                            {
+                                field: "email",
+                                message: "Email already used",
+                            },
+                        ],
+                    };
+                }
+                if (err.detail.includes("already exists") &&
+                    err.detail.includes("userName")) {
+                    return {
+                        errors: [
+                            {
+                                field: "userName",
+                                message: "username already used",
+                            },
+                        ],
+                    };
+                }
+            }
+            req.session.userId = admin.id;
             return {
-                errors: [
-                    {
-                        field: "username",
-                        message: "admin doesn't exist",
-                    },
-                ],
+                admin,
             };
-        }
-        const validPassword = await argon2_1.default.verify(admin.password, options.password);
-        if (!validPassword) {
+        });
+    }
+    deleteAdmin(username, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
+                throw new Error("Log in as a super-admin first");
+            }
+            const superAdmin = yield admin_1.Admin.findOne({
+                where: { id: req.session.userId, role: "SUPER_ADMIN" },
+            });
+            if (!superAdmin) {
+                throw new Error("Not authorized");
+            }
+            const admin = yield admin_1.Admin.findOne({ username: username });
+            if (!admin) {
+                throw new Error("No admin with this username found");
+            }
+            yield admin_1.Admin.delete({ username: username });
+        });
+    }
+    deleteUserProfilePic(userId, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
+                throw new Error("Not authenticated");
+            }
+            const admin = yield admin_1.Admin.findOne({ id: req.session.userId });
+            if (!admin) {
+                throw new Error("Admin required");
+            }
+            const user = yield user_1.User.findOne({ id: userId });
+            if (!user) {
+                throw new Error("User does not exist");
+            }
+            if (user.isWorker) {
+                yield worker_1.Worker.update({ id: userId }, { profilePicture: "" });
+                yield skill_1.Skill.update({ workerId: userId }, { workerPicUrl: "" });
+            }
+            yield user_1.User.update({ id: userId }, { profilePicture: "" });
+        });
+    }
+    deleteSkillPics(skillId, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
+                throw new Error("Not authenticated");
+            }
+            const admin = yield admin_1.Admin.findOne({ id: req.session.userId });
+            if (!admin) {
+                throw new Error("Admin required");
+            }
+            const skill = yield skill_1.Skill.findOne({ id: skillId });
+            if (!skill) {
+                throw new Error("Skill does not exist");
+            }
+            yield skill_1.Skill.update({ id: skillId }, { pictures: ["", "", "", ""] });
+            return true;
+        });
+    }
+    hideSkill(skillId, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
+                throw new Error("Not authenticated");
+            }
+            const admin = yield admin_1.Admin.findOne({ id: req.session.userId });
+            if (!admin) {
+                throw new Error("Admin required");
+            }
+            const skill = yield skill_1.Skill.findOne({ id: skillId });
+            if (!skill) {
+                throw new Error("Skill does not exist");
+            }
+            yield skill_1.Skill.update({ id: skillId }, { status: "Hidden" });
+            return true;
+        });
+    }
+    getAllUsers({ req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
+                throw new Error("Not authenticated");
+            }
+            const admin = yield admin_1.Admin.findOne({ id: req.session.userId });
+            if (!admin) {
+                throw new Error("Admin required");
+            }
+            const users = yield user_1.User.find({});
+            return users;
+        });
+    }
+    getAllWorkers({ req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
+                throw new Error("Not authenticated");
+            }
+            const admin = yield admin_1.Admin.findOne({ id: req.session.userId });
+            if (!admin) {
+                throw new Error("Admin required");
+            }
+            const workers = yield worker_1.Worker.find({});
+            return workers;
+        });
+    }
+    getAllSkills({ req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
+                throw new Error("Not authenticated");
+            }
+            const admin = yield admin_1.Admin.findOne({ id: req.session.userId });
+            if (!admin) {
+                throw new Error("Admin required");
+            }
+            const skills = yield skill_1.Skill.find({});
+            return skills;
+        });
+    }
+    adminLogin(options, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const admin = yield admin_1.Admin.findOne({
+                where: [{ username: options.username }],
+            });
+            if (!admin) {
+                return {
+                    errors: [
+                        {
+                            field: "username",
+                            message: "admin doesn't exist",
+                        },
+                    ],
+                };
+            }
+            const validPassword = yield argon2_1.default.verify(admin.password, options.password);
+            if (!validPassword) {
+                return {
+                    errors: [
+                        {
+                            field: "password",
+                            message: "Password incorrect",
+                        },
+                    ],
+                };
+            }
+            req.session.userId = admin.id;
             return {
-                errors: [
-                    {
-                        field: "password",
-                        message: "Password incorrect",
-                    },
-                ],
+                admin: admin,
             };
-        }
-        req.session.userId = admin.id;
-        return {
-            admin: admin,
-        };
+        });
     }
     logout({ req, res }) {
         return new Promise((resolve) => req.session.destroy((err) => {

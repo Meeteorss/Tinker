@@ -11,6 +11,15 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WorkerResolver = exports.WorkerRegisterInput = void 0;
 require("reflect-metadata");
@@ -63,134 +72,152 @@ WorkerRegisterInput = __decorate([
 ], WorkerRegisterInput);
 exports.WorkerRegisterInput = WorkerRegisterInput;
 let WorkerResolver = class WorkerResolver {
-    async age(parent) {
-        const age = new Date().getFullYear() - parent.dateOfBirth.getFullYear();
-        return age;
-    }
-    async fullName(parent) {
-        const fullName = `${parent.firstName} ${parent.lastName}`;
-        return fullName;
-    }
-    async email(parent, { req }) {
-        if (req.session.userId) {
-            return parent.email;
-        }
-        else {
-            return "";
-        }
-    }
-    async workerById(id) {
-        const worker = await worker_1.Worker.findOne({
-            where: {
-                id: id,
-            },
+    age(parent) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const age = new Date().getFullYear() - parent.dateOfBirth.getFullYear();
+            return age;
         });
-        if (!worker) {
-            return null;
-        }
-        return worker;
     }
-    async workerByUsername(username) {
-        const worker = await worker_1.Worker.findOne({
-            where: {
-                userName: username,
-            },
+    fullName(parent) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const fullName = `${parent.firstName} ${parent.lastName}`;
+            return fullName;
         });
-        if (!worker) {
-            return null;
-        }
-        return worker;
     }
-    async isWorker(userId, { req }) {
-        if (userId) {
-            const user = await user_1.User.findOne({ id: userId });
-            if (user === null || user === void 0 ? void 0 : user.isWorker) {
-                return true;
+    email(parent, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (req.session.userId) {
+                return parent.email;
             }
             else {
-                return false;
+                return "";
             }
-        }
-        else {
-            const user = await user_1.User.findOne({
+        });
+    }
+    workerById(id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const worker = yield worker_1.Worker.findOne({
+                where: {
+                    id: id,
+                },
+            });
+            if (!worker) {
+                return null;
+            }
+            return worker;
+        });
+    }
+    workerByUsername(username) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const worker = yield worker_1.Worker.findOne({
+                where: {
+                    userName: username,
+                },
+            });
+            if (!worker) {
+                return null;
+            }
+            return worker;
+        });
+    }
+    isWorker(userId, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (userId) {
+                const user = yield user_1.User.findOne({ id: userId });
+                if (user === null || user === void 0 ? void 0 : user.isWorker) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            }
+            else {
+                const user = yield user_1.User.findOne({
+                    id: req.session.userId,
+                });
+                if (user.isWorker) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            }
+        });
+    }
+    registerWorker(options, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
+                throw new Error("Not authenticated");
+            }
+            const user = yield user_1.User.findOne({
                 id: req.session.userId,
             });
-            if (user.isWorker) {
-                return true;
+            const errors = (0, validateWorkerRegister_1.validateWorkerRegister)(options);
+            if (errors) {
+                return { errors };
             }
-            else {
-                return false;
+            if (!user) {
+                throw new Error("not authenticated");
             }
-        }
-    }
-    async registerWorker(options, { req }) {
-        if (!req.session.userId) {
-            throw new Error("Not authenticated");
-        }
-        const user = await user_1.User.findOne({
-            id: req.session.userId,
+            if (!user.confirmed) {
+                throw new Error("Confirm email first");
+            }
+            user.isWorker = true;
+            yield user_1.User.save(user);
+            let profilePicture = "";
+            if (user.profilePicture != null) {
+                profilePicture = user.profilePicture;
+            }
+            const worker = worker_1.Worker.create({
+                id: user.id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                userName: user.userName,
+                email: user.email,
+                password: user.password,
+                phone: options.phone,
+                city: options.city,
+                sexe: options.sexe,
+                dateOfBirth: options.dateOfBirth,
+                description: options.description,
+                profilePicture: profilePicture,
+            });
+            yield worker_1.Worker.save(worker);
+            return {
+                worker,
+            };
         });
-        const errors = (0, validateWorkerRegister_1.validateWorkerRegister)(options);
-        if (errors) {
-            return { errors };
-        }
-        if (!user) {
-            throw new Error("not authenticated");
-        }
-        if (!user.confirmed) {
-            throw new Error("Confirm email first");
-        }
-        user.isWorker = true;
-        await user_1.User.save(user);
-        let profilePicture = "";
-        if (user.profilePicture != null) {
-            profilePicture = user.profilePicture;
-        }
-        const worker = worker_1.Worker.create({
-            id: user.id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            userName: user.userName,
-            email: user.email,
-            password: user.password,
-            phone: options.phone,
-            city: options.city,
-            sexe: options.sexe,
-            dateOfBirth: options.dateOfBirth,
-            description: options.description,
-            profilePicture: profilePicture,
-        });
-        await worker_1.Worker.save(worker);
-        return {
-            worker,
-        };
     }
-    async updateWorker(options, { req }) {
-        if (!req.session.userId) {
-            throw new Error("Not authenticated");
-        }
-        const worker = await worker_1.Worker.findOne({
-            id: req.session.userId,
+    updateWorker(options, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
+                throw new Error("Not authenticated");
+            }
+            const worker = yield worker_1.Worker.findOne({
+                id: req.session.userId,
+            });
+            const errors = (0, validateWorkerRegister_1.validateWorkerRegister)(options);
+            if (errors) {
+                return { errors };
+            }
+            if (!worker) {
+                throw new Error("not authenticated");
+            }
+            worker.phone = options.phone;
+            worker.city = options.city;
+            worker.sexe = options.sexe;
+            worker.dateOfBirth = options.dateOfBirth;
+            worker.description = options.description;
+            yield worker_1.Worker.save(worker);
+            return {
+                worker,
+            };
         });
-        const errors = (0, validateWorkerRegister_1.validateWorkerRegister)(options);
-        if (errors) {
-            return { errors };
-        }
-        if (!worker) {
-            throw new Error("not authenticated");
-        }
-        worker.phone = options.phone;
-        worker.city = options.city;
-        worker.sexe = options.sexe;
-        worker.dateOfBirth = options.dateOfBirth;
-        worker.description = options.description;
-        await worker_1.Worker.save(worker);
-        return {
-            worker,
-        };
     }
-    async workers() {
-        return await worker_1.Worker.find({});
+    workers() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield worker_1.Worker.find({});
+        });
     }
 };
 __decorate([

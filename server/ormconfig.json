@@ -2,14 +2,13 @@
     "type": "postgres",
     "host": "localhost",
     "port": 5432,
-    "synchronize": true,
+    "username": "postgres",
+    "password" :"progamer98^^",
+    
+    "database":"ProjectA2",
     "logging": false,
-    "entities": ["src/entities/**/*.ts"],
-    "migrations": ["src/migration/**/*.ts"],
-    "subscribers": ["src/subscriber/**/*.ts"],
-    "cli": {
-      "entitiesDir": "src/entities",
-      "migrationsDir": "src/migration",
-      "subscribersDir": "src/subscriber"
-    }
+    "entities": ["dist/entities/*.js"],
+    "migrations": ["dist/migrations/*.js"]
+    
+   
   }

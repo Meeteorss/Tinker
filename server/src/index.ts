@@ -1,9 +1,10 @@
 import "dotenv/config";
+import "module-alias/register";
+import "dotenv-safe/config";
 import "reflect-metadata";
 import { createConnection } from "typeorm";
 import {
   COOKIE_NAME,
-  SECRET,
   ___DB_PASSWORD,
   ___DB_USERNAME,
   ___prod___,
@@ -20,7 +21,7 @@ import { Favorite } from "./entities/favorite";
 import { UserResolver } from "./resolvers/user";
 import { RatingResolver } from "./resolvers/rating";
 import { WorkerResolver } from "./resolvers/worker";
-import { UploadResolver } from "./resolvers/Upload";
+import { UploadResolver } from "./resolvers/upload";
 import { CommentResolver } from "./resolvers/comment";
 import { SkillResolver } from "./resolvers/skill";
 
@@ -30,7 +31,7 @@ import { buildSchema } from "type-graphql";
 
 import session from "express-session";
 import connectRedis from "connect-redis";
-import { MyContext } from "./types";
+// import { MyContext } from "./types";
 import cors from "cors";
 import path from "path";
 
@@ -45,10 +46,13 @@ import { Admin } from "./entities/admin";
 const main = async () => {
   const cnx = await createConnection({
     type: "postgres",
-    database: "projectA",
+    // database: "projectA",
+    // username: ___DB_USERNAME,
+    // password: ___DB_PASSWORD,
+    url: process.env.DATABASE_URL,
     logging: false,
     migrations: [path.join(__dirname, "./migrations/*")],
-    synchronize: true,
+    synchronize: !___prod___,
     entities: [
       User,
       Worker,
@@ -60,35 +64,67 @@ const main = async () => {
       Message,
       Admin,
     ],
-    username: ___DB_USERNAME,
-    password: ___DB_PASSWORD,
+    // entities: [Rating, User, Worker, "entities/*"],
   });
-  console.log("------", cnx.name);
-  await cnx.runMigrations();
-  const app = express();
+  //console.log("------", cnx.name);
+  if (___prod___) {
+    await cnx.runMigrations();
+  }
 
+  const app = express();
+  app.set("trust proxy", 1);
+  // app.use((req, res, next) => {
+  //   res.header(
+  //     "Access-Control-Allow-Origin",
+  //     process.env.CORS_ORIGIN as string
+  //   );
+  //   res.header(
+  //     "Access-Control-Allow-Methods",
+  //     "GET, PUT, POST, DELETE, OPTIONS"
+  //   );
+  //   res.header(
+  //     "Access-Control-Allow-Headers",
+  //     "Content-Type, Authorization, Content-Length, X-Requested-With"
+  //   );
+  //   res.header("Access-Control-Allow-Credentials", "true");
+
+  //   if ("OPTIONS" === req.method) {
+  //     res.status(200).send();
+  //   } else {
+  //     next();
+  //   }
+  // });
+  const whitelist = ["http://localhost:3000"];
   app.use(
     cors({
-      origin: "http://localhost:3000",
+      // origin: process.env.CORS_ORIGIN as string,
+      origin: (origin, callback) => {
+        // console.log("origin:", origin);
+        var originIsWhitelisted =
+          whitelist.indexOf(origin!) !== -1 || origin?.includes("tinker.ma");
+        callback(null, originIsWhitelisted);
+      },
       credentials: true,
+      optionsSuccessStatus: 200,
     })
   );
 
   const RedisStore = connectRedis(session);
 
-  // sdss
+  // sdssrrrrr
   app.use(
     session({
       store: new RedisStore({ client: redis as any, disableTouch: true }),
       name: COOKIE_NAME,
       saveUninitialized: false,
-      secret: SECRET,
+      secret: process.env.SESSION_SECRET as string,
       resave: false,
       cookie: {
         maxAge: 1000 * 60 * 60 * 24 * 365 * 10,
         httpOnly: true,
-        secure: false,
+        secure: ___prod___,
         sameSite: "lax",
+        domain: ___prod___ ? ".tinker.ma" : undefined,
       },
     })
   );
@@ -110,21 +146,18 @@ const main = async () => {
       ],
       validate: false,
     }),
-
-    context: ({ req, res }): MyContext => ({ req, res, redis }),
+    context: ({ req, res }) => ({ req, res, redis }),
+    // context: ({ req, res }): MyContext => ({ req, res, redis }),
   });
 
   await apolloServer.start();
   await apolloServer.applyMiddleware({ app, cors: false });
 
-  // await User.delete({ userName: "meeteorss" });
-  // await Worker.delete({ userName: "meeteorss" });
-  // await Skill.delete({});
-
   // rrrr
 
-  app.listen(4000, () => {
-    console.log("server started on localhost:4000");
+  app.listen(parseInt(process.env.PORT as string), () => {
+    console.log("server started successfully");
+    console.log(`server started on localhost:${process.env.PORT}`);
   });
 };
 

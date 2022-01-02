@@ -11,6 +11,15 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ChatResolver = void 0;
 const type_graphql_1 = require("type-graphql");
@@ -18,52 +27,56 @@ const chat_1 = require("../entities/chat");
 const user_1 = require("../entities/user");
 const channel = "CHAT_CHANNEL";
 let ChatResolver = class ChatResolver {
-    async createChat(recieverId, message, { req }, pubSub) {
-        const users = await user_1.User.find({
-            where: [{ id: req.session.userId }, { id: recieverId }],
+    createChat(recieverId, message, { req }, pubSub) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const users = yield user_1.User.find({
+                where: [{ id: req.session.userId }, { id: recieverId }],
+            });
+            const reciever = users.filter((u) => {
+                return u.id == recieverId;
+            })[0];
+            const sender = users.filter((u) => {
+                return u.id == req.session.userId;
+            })[0];
+            if (!sender) {
+                throw new Error("Not authenticated");
+            }
+            if (!reciever) {
+                throw new Error("Reciever doesnt exist");
+            }
+            if (!message || message == "") {
+                throw new Error("You can't send an empty message");
+            }
+            const chat = chat_1.Chat.create({
+                recieverId: reciever.id,
+                senderId: sender.id,
+                message: message,
+            });
+            yield chat_1.Chat.insert(chat);
+            const payload = chat;
+            yield pubSub.publish(channel, payload);
+            return chat;
         });
-        const reciever = users.filter((u) => {
-            return u.id == recieverId;
-        })[0];
-        const sender = users.filter((u) => {
-            return u.id == req.session.userId;
-        })[0];
-        if (!sender) {
-            throw new Error("Not authenticated");
-        }
-        if (!reciever) {
-            throw new Error("Reciever doesnt exist");
-        }
-        if (!message || message == "") {
-            throw new Error("You can't send an empty message");
-        }
-        const chat = chat_1.Chat.create({
-            recieverId: reciever.id,
-            senderId: sender.id,
-            message: message,
-        });
-        await chat_1.Chat.insert(chat);
-        const payload = chat;
-        await pubSub.publish(channel, payload);
-        return chat;
     }
-    async getConversation(otherId, { req }) {
-        const user = await user_1.User.findOne({
-            where: { id: req.session.userId },
+    getConversation(otherId, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield user_1.User.findOne({
+                where: { id: req.session.userId },
+            });
+            if (!user) {
+                throw new Error("Not authenticated");
+            }
+            const chats = yield chat_1.Chat.find({
+                where: [
+                    { senderId: user.id, recieverId: otherId },
+                    { senderId: otherId, recieverId: user.id },
+                ],
+            });
+            if (!chats) {
+                throw new Error("You don't have any messages yet");
+            }
+            return chats;
         });
-        if (!user) {
-            throw new Error("Not authenticated");
-        }
-        const chats = await chat_1.Chat.find({
-            where: [
-                { senderId: user.id, recieverId: otherId },
-                { senderId: otherId, recieverId: user.id },
-            ],
-        });
-        if (!chats) {
-            throw new Error("You don't have any messages yet");
-        }
-        return chats;
     }
 };
 __decorate([

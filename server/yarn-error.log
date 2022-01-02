@@ -1,8 +1,8 @@
 Arguments: 
-  C:\Program Files\nodejs\node.exe C:\Users\isigm\AppData\Roaming\npm\node_modules\yarn\bin\yarn.js add -D @types/validate-date
+  C:\Program Files\nodejs\node.exe C:\Users\isigm\AppData\Roaming\npm\node_modules\yarn\bin\yarn.js add dotenv-sage
 
 PATH: 
-  C:\Users\isigm\bin;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\local\bin;C:\Program Files\Git\usr\bin;C:\Program Files\Git\usr\bin;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\bin;C:\Users\isigm\bin;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\NVIDIA Corporation\NVIDIA NvDLISR;C:\Users\isigm\Downloads\cygwin64\cygwin64\bin;C:\Program Files\Git\cmd;C:\Program Files\Symfony;C:\wamp64\bin\php\php7.4.9;C:\xampp\php;C:\ProgramData\ComposerSetup\bin;C:\Program Files\nodejs;C:\Users\isigm\AppData\Local\Microsoft\WindowsApps;C:\Users\isigm\AppData\Local\Programs\Microsoft VS Code\bin;C:\wamp64\bin\php\php7.4.9;C:\Program Files\JetBrains\IntelliJ IDEA Community Edition 2021.1.1\bin;C:\Users\isigm\AppData\Roaming\Composer\vendor\bin;C:\Users\isigm\AppData\Roaming\npm;C:\Program Files\Git\usr\bin\vendor_perl;C:\Program Files\Git\usr\bin\core_perl
+  C:\Users\isigm\bin;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\local\bin;C:\Program Files\Git\usr\bin;C:\Program Files\Git\usr\bin;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\bin;C:\Users\isigm\bin;C:\Program Files (x86)\Common Files\Oracle\Java\javapath;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32\OpenSSH;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\NVIDIA Corporation\NVIDIA NvDLISR;C:\Users\isigm\Downloads\cygwin64\cygwin64\bin;C:\Program Files\Git\cmd;C:\Program Files\Symfony;C:\wamp64\bin\php\php7.4.9;C:\xampp\php;C:\ProgramData\ComposerSetup\bin;C:\Program Files\nodejs;C:\Program Files\Microsoft SQL Server\150\Tools\Binn;C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn;C:\Program Files\dotnet;C:\Program Files\Docker\Docker\resources\bin;C:\ProgramData\DockerDesktop\version-bin;C:\Users\isigm\AppData\Local\Microsoft\WindowsApps;C:\Users\isigm\AppData\Local\Programs\Microsoft VS Code\bin;C:\wamp64\bin\php\php7.4.9;C:\Program Files\JetBrains\IntelliJ IDEA Community Edition 2021.1.1\bin;C:\Users\isigm\AppData\Roaming\Composer\vendor\bin;C:\Users\isigm\AppData\Roaming\npm;C:\Users\isigm\.dotnet\tools;C:\Program Files\Git\usr\bin\vendor_perl;C:\Program Files\Git\usr\bin\core_perl
 
 Yarn version: 
   1.22.11
@@ -14,7 +14,7 @@ Platform:
   win32 x64
 
 Trace: 
-  Error: https://registry.yarnpkg.com/@types%2fvalidate-date: Not found
+  Error: https://registry.yarnpkg.com/dotenv-sage: Not found
       at Request.params.callback [as _callback] (C:\Users\isigm\AppData\Roaming\npm\node_modules\yarn\lib\cli.js:66992:18)
       at Request.self.callback (C:\Users\isigm\AppData\Roaming\npm\node_modules\yarn\lib\cli.js:140763:22)
       at Request.emit (events.js:400:28)
@@ -33,6 +33,7 @@ npm manifest:
     "description": "",
     "main": "index.js",
     "scripts": {
+      "build": "tsc",
       "watch": "tsc -w",
       "start": "node dist/index.js",
       "dev": "nodemon dist/index.js"

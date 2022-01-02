@@ -11,6 +11,15 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MessageResolver = void 0;
 const type_graphql_1 = require("type-graphql");
@@ -70,229 +79,241 @@ FormattedMessage = __decorate([
     (0, type_graphql_1.ObjectType)()
 ], FormattedMessage);
 let MessageResolver = class MessageResolver {
-    async sendMessage(recieverId, content, { req }) {
-        const users = await user_1.User.find({
-            where: [{ id: req.session.userId }, { id: recieverId }],
+    sendMessage(recieverId, content, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const users = yield user_1.User.find({
+                where: [{ id: req.session.userId }, { id: recieverId }],
+            });
+            const reciever = users.filter((u) => {
+                return u.id == recieverId;
+            })[0];
+            const sender = users.filter((u) => {
+                return u.id == req.session.userId;
+            })[0];
+            if (!sender) {
+                throw new Error("Not authenticated");
+            }
+            if (!reciever) {
+                throw new Error("Reciever doesnt exist");
+            }
+            if (!content || content == "") {
+                throw new Error("You can't send an empty message");
+            }
+            const message = message_1.Message.create({
+                recieverId: reciever.id,
+                senderId: sender.id,
+                reciever: reciever.userName,
+                sender: sender.userName,
+                content: content,
+                state: message_1.RemovedBy.NONE,
+            });
+            yield message_1.Message.insert(message);
+            return true;
         });
-        const reciever = users.filter((u) => {
-            return u.id == recieverId;
-        })[0];
-        const sender = users.filter((u) => {
-            return u.id == req.session.userId;
-        })[0];
-        if (!sender) {
-            throw new Error("Not authenticated");
-        }
-        if (!reciever) {
-            throw new Error("Reciever doesnt exist");
-        }
-        if (!content || content == "") {
-            throw new Error("You can't send an empty message");
-        }
-        const message = message_1.Message.create({
-            recieverId: reciever.id,
-            senderId: sender.id,
-            reciever: reciever.userName,
-            sender: sender.userName,
-            content: content,
-            state: message_1.RemovedBy.NONE,
-        });
-        await message_1.Message.insert(message);
-        return true;
     }
-    async unsendMessage(messageId, { req }) {
-        const sender = await user_1.User.findOne({
-            where: { id: req.session.userId },
+    unsendMessage(messageId, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const sender = yield user_1.User.findOne({
+                where: { id: req.session.userId },
+            });
+            if (!sender) {
+                throw new Error("Not authenticated");
+            }
+            const message = yield message_1.Message.findOne({ id: messageId });
+            if (!message) {
+                throw new Error("This message no longer exists");
+            }
+            if (new Date().getTime() - new Date(message.createdAt).getTime() >
+                1000 * 60 * 30) {
+                throw new Error("You cannot unsend this message anymore");
+            }
+            if (message.senderId != sender.id) {
+                throw new Error("You cannot delete this message");
+            }
+            yield message_1.Message.delete(message);
+            return true;
         });
-        if (!sender) {
-            throw new Error("Not authenticated");
-        }
-        const message = await message_1.Message.findOne({ id: messageId });
-        if (!message) {
-            throw new Error("This message no longer exists");
-        }
-        if (new Date().getTime() - new Date(message.createdAt).getTime() >
-            1000 * 60 * 30) {
-            throw new Error("You cannot unsend this message anymore");
-        }
-        if (message.senderId != sender.id) {
-            throw new Error("You cannot delete this message");
-        }
-        await message_1.Message.delete(message);
-        return true;
     }
-    async removeMessage(messageId, { req }) {
-        const user = await user_1.User.findOne({
-            where: { id: req.session.userId },
-        });
-        if (!user) {
-            throw new Error("Not authenticated");
-        }
-        const message = await message_1.Message.findOne({ id: messageId });
-        if (!message) {
-            throw new Error("This message no longer exists");
-        }
-        let deleter;
-        if (message.senderId == user.id) {
-            deleter = message_1.RemovedBy.SENDER;
-        }
-        else {
-            deleter = message_1.RemovedBy.RECIEVER;
-        }
-        if (message.state == message_1.RemovedBy.NONE) {
+    removeMessage(messageId, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield user_1.User.findOne({
+                where: { id: req.session.userId },
+            });
+            if (!user) {
+                throw new Error("Not authenticated");
+            }
+            const message = yield message_1.Message.findOne({ id: messageId });
+            if (!message) {
+                throw new Error("This message no longer exists");
+            }
+            let deleter;
             if (message.senderId == user.id) {
-                message.state = message_1.RemovedBy.SENDER;
-            }
-            if (message.recieverId == user.id) {
-                message.state = message_1.RemovedBy.RECIEVER;
-            }
-        }
-        else if (message.state == (message_1.RemovedBy.RECIEVER || message_1.RemovedBy.SENDER) &&
-            message.state != deleter) {
-            await message_1.Message.delete(message);
-        }
-        return true;
-    }
-    async getMessages({ req }) {
-        const user = await user_1.User.findOne({
-            where: { id: req.session.userId },
-        });
-        if (!user) {
-            throw new Error("Not authenticated");
-        }
-        const messages = await message_1.Message.find({
-            where: [{ senderId: user.id }, { recieverId: user.id }],
-            order: { createdAt: "DESC" },
-        });
-        if (!messages) {
-            throw new Error("You don't have any messages yet");
-        }
-        const sortedMessages = messages.filter((message) => {
-            return ((message.state == message_1.RemovedBy.SENDER && message.senderId != user.id) ||
-                (message.state == message_1.RemovedBy.RECIEVER &&
-                    message.recieverId != user.id) ||
-                message.state == message_1.RemovedBy.NONE);
-        });
-        if (!sortedMessages) {
-            throw new Error("You don't have any messages ");
-        }
-        return sortedMessages;
-    }
-    async getConversations({ req }) {
-        const user = await user_1.User.findOne({
-            where: { id: req.session.userId },
-        });
-        if (!user) {
-            throw new Error("Not authenticated");
-        }
-        const messages = await message_1.Message.find({
-            where: [{ senderId: user.id }, { recieverId: user.id }],
-            order: { createdAt: "DESC" },
-        });
-        if (!messages) {
-            throw new Error("You don't have any messages yet");
-        }
-        const filteredMessages = messages.filter((message) => {
-            return ((message.state == message_1.RemovedBy.SENDER && message.senderId != user.id) ||
-                (message.state == message_1.RemovedBy.RECIEVER &&
-                    message.recieverId != user.id) ||
-                message.state == message_1.RemovedBy.NONE);
-        });
-        if (!filteredMessages) {
-            throw new Error("You don't have any messages ");
-        }
-        const sortedMessages = filteredMessages.map((message) => {
-            if (req.session.userId == message.senderId) {
-                return {
-                    id: message.id,
-                    userId: message.senderId,
-                    user: message.sender,
-                    otherId: message.recieverId,
-                    other: message.reciever,
-                    content: message.content,
-                    state: message.state,
-                    createdAt: message.createdAt.toString(),
-                };
-            }
-            else if (req.session.userId == message.recieverId) {
-                return {
-                    id: message.id,
-                    userId: message.recieverId,
-                    user: message.reciever,
-                    otherId: message.senderId,
-                    other: message.sender,
-                    content: message.content,
-                    state: message.state,
-                    createdAt: message.createdAt.toString(),
-                };
+                deleter = message_1.RemovedBy.SENDER;
             }
             else {
-                return {
-                    id: "",
-                    userId: "",
-                    user: "",
-                    otherId: "",
-                    other: "",
-                    content: "",
-                    state: "",
-                    createdAt: new Date().toString(),
-                };
+                deleter = message_1.RemovedBy.RECIEVER;
             }
-        });
-        let othersIds = [];
-        sortedMessages.forEach((message) => {
-            if (!othersIds.includes(message.otherId)) {
-                othersIds.push(message.otherId);
+            if (message.state == message_1.RemovedBy.NONE) {
+                if (message.senderId == user.id) {
+                    message.state = message_1.RemovedBy.SENDER;
+                }
+                if (message.recieverId == user.id) {
+                    message.state = message_1.RemovedBy.RECIEVER;
+                }
             }
+            else if (message.state == (message_1.RemovedBy.RECIEVER || message_1.RemovedBy.SENDER) &&
+                message.state != deleter) {
+                yield message_1.Message.delete(message);
+            }
+            return true;
         });
-        let conversations = new Array(othersIds.length);
-        conversations.forEach((_, idx) => {
-            conversations[idx] = new Array();
+    }
+    getMessages({ req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield user_1.User.findOne({
+                where: { id: req.session.userId },
+            });
+            if (!user) {
+                throw new Error("Not authenticated");
+            }
+            const messages = yield message_1.Message.find({
+                where: [{ senderId: user.id }, { recieverId: user.id }],
+                order: { createdAt: "DESC" },
+            });
+            if (!messages) {
+                throw new Error("You don't have any messages yet");
+            }
+            const sortedMessages = messages.filter((message) => {
+                return ((message.state == message_1.RemovedBy.SENDER && message.senderId != user.id) ||
+                    (message.state == message_1.RemovedBy.RECIEVER &&
+                        message.recieverId != user.id) ||
+                    message.state == message_1.RemovedBy.NONE);
+            });
+            if (!sortedMessages) {
+                throw new Error("You don't have any messages ");
+            }
+            return sortedMessages;
         });
-        othersIds.forEach((id, idx) => {
-            sortedMessages.forEach((message) => {
-                if (message.otherId == id) {
-                    if (!conversations[idx]) {
-                        conversations[idx] = [message];
-                    }
-                    else {
-                        conversations[idx].push(message);
-                    }
+    }
+    getConversations({ req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield user_1.User.findOne({
+                where: { id: req.session.userId },
+            });
+            if (!user) {
+                throw new Error("Not authenticated");
+            }
+            const messages = yield message_1.Message.find({
+                where: [{ senderId: user.id }, { recieverId: user.id }],
+                order: { createdAt: "DESC" },
+            });
+            if (!messages) {
+                throw new Error("You don't have any messages yet");
+            }
+            const filteredMessages = messages.filter((message) => {
+                return ((message.state == message_1.RemovedBy.SENDER && message.senderId != user.id) ||
+                    (message.state == message_1.RemovedBy.RECIEVER &&
+                        message.recieverId != user.id) ||
+                    message.state == message_1.RemovedBy.NONE);
+            });
+            if (!filteredMessages) {
+                throw new Error("You don't have any messages ");
+            }
+            const sortedMessages = filteredMessages.map((message) => {
+                if (req.session.userId == message.senderId) {
+                    return {
+                        id: message.id,
+                        userId: message.senderId,
+                        user: message.sender,
+                        otherId: message.recieverId,
+                        other: message.reciever,
+                        content: message.content,
+                        state: message.state,
+                        createdAt: message.createdAt.toString(),
+                    };
+                }
+                else if (req.session.userId == message.recieverId) {
+                    return {
+                        id: message.id,
+                        userId: message.recieverId,
+                        user: message.reciever,
+                        otherId: message.senderId,
+                        other: message.sender,
+                        content: message.content,
+                        state: message.state,
+                        createdAt: message.createdAt.toString(),
+                    };
+                }
+                else {
+                    return {
+                        id: "",
+                        userId: "",
+                        user: "",
+                        otherId: "",
+                        other: "",
+                        content: "",
+                        state: "",
+                        createdAt: new Date().toString(),
+                    };
                 }
             });
+            let othersIds = [];
+            sortedMessages.forEach((message) => {
+                if (!othersIds.includes(message.otherId)) {
+                    othersIds.push(message.otherId);
+                }
+            });
+            let conversations = new Array(othersIds.length);
+            conversations.forEach((_, idx) => {
+                conversations[idx] = new Array();
+            });
+            othersIds.forEach((id, idx) => {
+                sortedMessages.forEach((message) => {
+                    if (message.otherId == id) {
+                        if (!conversations[idx]) {
+                            conversations[idx] = [message];
+                        }
+                        else {
+                            conversations[idx].push(message);
+                        }
+                    }
+                });
+            });
+            let convos = [];
+            conversations.map((convo, idx) => {
+                convos[idx] = convo[0];
+            });
+            return convos;
         });
-        let convos = [];
-        conversations.map((convo, idx) => {
-            convos[idx] = convo[0];
-        });
-        return convos;
     }
-    async getConversation(otherId, { req }) {
-        const user = await user_1.User.findOne({
-            where: { id: req.session.userId },
+    getConversation(otherId, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield user_1.User.findOne({
+                where: { id: req.session.userId },
+            });
+            if (!user) {
+                throw new Error("Not authenticated");
+            }
+            const messages = yield message_1.Message.find({
+                where: [
+                    { senderId: user.id, recieverId: otherId },
+                    { senderId: otherId, recieverId: user.id },
+                ],
+            });
+            if (!messages) {
+                throw new Error("You don't have any messages yet");
+            }
+            const filteredMessages = messages.filter((message) => {
+                return ((message.state == message_1.RemovedBy.SENDER && message.senderId != user.id) ||
+                    (message.state == message_1.RemovedBy.RECIEVER &&
+                        message.recieverId != user.id) ||
+                    message.state == message_1.RemovedBy.NONE);
+            });
+            if (!filteredMessages) {
+                throw new Error("You don't have any messages ");
+            }
+            return filteredMessages;
         });
-        if (!user) {
-            throw new Error("Not authenticated");
-        }
-        const messages = await message_1.Message.find({
-            where: [
-                { senderId: user.id, recieverId: otherId },
-                { senderId: otherId, recieverId: user.id },
-            ],
-        });
-        if (!messages) {
-            throw new Error("You don't have any messages yet");
-        }
-        const filteredMessages = messages.filter((message) => {
-            return ((message.state == message_1.RemovedBy.SENDER && message.senderId != user.id) ||
-                (message.state == message_1.RemovedBy.RECIEVER &&
-                    message.recieverId != user.id) ||
-                message.state == message_1.RemovedBy.NONE);
-        });
-        if (!filteredMessages) {
-            throw new Error("You don't have any messages ");
-        }
-        return filteredMessages;
     }
 };
 __decorate([

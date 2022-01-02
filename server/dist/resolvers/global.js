@@ -11,6 +11,15 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GlobalResolver = void 0;
 const type_graphql_1 = require("type-graphql");
@@ -72,83 +81,89 @@ WorkerPageResponse = __decorate([
     (0, type_graphql_1.ObjectType)()
 ], WorkerPageResponse);
 let GlobalResolver = class GlobalResolver {
-    async navbarQuery({ req }) {
-        if (!req.session.userId) {
-            throw new Error("Not authenticated");
-        }
-        const user = await user_1.User.findOne({
-            id: req.session.userId,
-        });
-        if (!user) {
-            throw new Error("User does not exist");
-        }
-        const skills = await (0, typeorm_1.getConnection)().query(`
+    navbarQuery({ req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
+                throw new Error("Not authenticated");
+            }
+            const user = yield user_1.User.findOne({
+                id: req.session.userId,
+            });
+            if (!user) {
+                throw new Error("User does not exist");
+            }
+            const skills = yield (0, typeorm_1.getConnection)().query(`
     select id,title,worker,pictures from skill
     left join "like" as l on skill.id::text = l."skillId"::text
     where l."userId"::text = '${user.id}'
     `);
-        if (!skills) {
-            throw new Error("No liked skill found");
-        }
-        skills.forEach((skill) => {
-            skill.pictures = skill.pictures.split(",");
-        });
-        const workers = await (0, typeorm_1.getConnection)().query(`
+            if (!skills) {
+                throw new Error("No liked skill found");
+            }
+            skills.forEach((skill) => {
+                skill.pictures = skill.pictures.split(",");
+            });
+            const workers = yield (0, typeorm_1.getConnection)().query(`
     select id,"userName","profilePicture","rating","ratingsNumber" from worker
     left join "favorite" as f on worker.id::text = f."workerId"::text
 	  where f."userId"::text = '${user.id}' 
      `);
-        if (!workers) {
-            throw new Error("No favorite tinker found");
-        }
-        return {
-            user,
-            likes: skills,
-            favs: workers,
-        };
+            if (!workers) {
+                throw new Error("No favorite tinker found");
+            }
+            return {
+                user,
+                likes: skills,
+                favs: workers,
+            };
+        });
     }
-    async skillPageQuery(username, title) {
-        title = title.replace(/_/g, " ");
-        const worker = await worker_1.Worker.findOne({
-            where: {
-                userName: username,
-            },
+    skillPageQuery(username, title) {
+        return __awaiter(this, void 0, void 0, function* () {
+            title = title.replace(/_/g, " ");
+            const worker = yield worker_1.Worker.findOne({
+                where: {
+                    userName: username,
+                },
+            });
+            const skills = yield skill_1.Skill.find({
+                where: { worker: username },
+            });
+            if (!skills || !worker) {
+                throw new Error("Skill or worker doesnt exist");
+            }
+            const skill = skills.find((s) => s.title == title);
+            const otherSkills = skills.filter((s) => {
+                return !(s == skill);
+            });
+            return {
+                skill,
+                worker,
+                otherSkills,
+            };
         });
-        const skills = await skill_1.Skill.find({
-            where: { worker: username },
-        });
-        if (!skills || !worker) {
-            throw new Error("Skill or worker doesnt exist");
-        }
-        const skill = skills.find((s) => s.title == title);
-        const otherSkills = skills.filter((s) => {
-            return !(s == skill);
-        });
-        return {
-            skill,
-            worker,
-            otherSkills,
-        };
     }
-    async workerPageQuery(username) {
-        const worker = await worker_1.Worker.findOne({
-            where: {
-                userName: username,
-            },
+    workerPageQuery(username) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const worker = yield worker_1.Worker.findOne({
+                where: {
+                    userName: username,
+                },
+            });
+            if (!worker) {
+                return null;
+            }
+            const skills = yield skill_1.Skill.find({
+                where: { worker: username, workerId: worker.id },
+            });
+            if (!skills || !worker) {
+                return null;
+            }
+            return {
+                worker,
+                skills,
+            };
         });
-        if (!worker) {
-            return null;
-        }
-        const skills = await skill_1.Skill.find({
-            where: { worker: username, workerId: worker.id },
-        });
-        if (!skills || !worker) {
-            return null;
-        }
-        return {
-            worker,
-            skills,
-        };
     }
 };
 __decorate([

@@ -11,6 +11,15 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SkillResolver = exports.UpdateSkillInput = exports.CreateSkillS3Input = exports.CreateSkillS2Input = exports.CreateSkillS1Input = void 0;
 const skill_1 = require("../entities/skill");
@@ -109,223 +118,243 @@ UpdateSkillInput = __decorate([
 ], UpdateSkillInput);
 exports.UpdateSkillInput = UpdateSkillInput;
 let SkillResolver = class SkillResolver {
-    async createSkillS1(options, { req }) {
-        if (!req.session.userId) {
-            throw new Error("Not authenticated");
-        }
-        const errors = (0, validateInput_1.validateSkillCreationS1)(options);
-        if (errors) {
-            return { errors };
-        }
-        const worker = await worker_1.Worker.findOne({ id: req.session.userId });
-        if (!worker) {
-            throw new Error("Regular users cannot create skills");
-        }
-        const skill = await skill_1.Skill.create({
-            workerId: req.session.userId,
-            category: options.category,
-            title: options.title,
-            zone: options.zone,
-            rating: worker.rating,
-            ratingsNumber: worker.ratingsNumber,
-            worker: worker.userName,
-            workerPicUrl: worker.profilePicture,
-            status: "Pending",
-            pictures: ["", "", "", ""],
-        });
-        await skill_1.Skill.save(skill);
-        if (!worker.skillsIds) {
-            worker.skillsIds = [skill.id];
-        }
-        else {
-            worker.skillsIds.push(skill.id);
-        }
-        await worker_1.Worker.save(worker);
-        return {
-            skill,
-        };
-    }
-    async createSkillS2(options, skillId, { req }) {
-        if (!req.session.userId) {
-            throw new Error("Not authenticated");
-        }
-        const errors = (0, validateInput_1.validateSkillCreationS2)(options);
-        if (errors) {
-            return { errors };
-        }
-        const skill = await skill_1.Skill.findOne({ id: skillId });
-        if (!skill) {
-            throw new Error("This skill does'nt exist");
-        }
-        if (skill.workerId != req.session.userId) {
-            throw new Error("You don't have access to this skill");
-        }
-        const worker = await worker_1.Worker.findOne({ id: req.session.userId });
-        if (!worker) {
-            throw new Error("Not authenticated");
-        }
-        skill.description = options.description;
-        await skill_1.Skill.save(skill);
-        return {
-            skill,
-        };
-    }
-    async createSkillS3(options, skillId, { req }) {
-        if (!req.session.userId) {
-            throw new Error("Not authenticated");
-        }
-        const errors = (0, validateInput_1.validateSkillCreationS3)(options);
-        if (errors) {
-            return { errors };
-        }
-        const skill = await skill_1.Skill.findOne({ id: skillId });
-        if (!skill) {
-            throw new Error("This skill does'nt exist");
-        }
-        if (skill.workerId != req.session.userId) {
-            throw new Error("You don't have access to this skill");
-        }
-        const worker = await worker_1.Worker.findOne({ id: req.session.userId });
-        if (!worker) {
-            throw new Error("Not authenticated");
-        }
-        skill.duration = options.duration;
-        skill.pricing = parseInt(options.pricing);
-        skill.status = "Finished";
-        await skill_1.Skill.save(skill);
-        return {
-            skill,
-        };
-    }
-    async updateSkill(options, skillId, { req }) {
-        const worker = await worker_1.Worker.findOne({ id: req.session.userId });
-        if (!req.session.userId || req.session.userId != (worker === null || worker === void 0 ? void 0 : worker.id)) {
-            throw new Error("Not authenticated");
-        }
-        const errors = (0, validateInput_1.validateSkillUpdate)(options);
-        if (errors) {
-            return { errors };
-        }
-        const skill = await skill_1.Skill.findOne({ id: skillId });
-        if (!skill) {
-            throw new Error("no skill found");
-        }
-        skill.category = options.category;
-        skill.title = options.title;
-        skill.description = options.description;
-        skill.pricing = parseInt(options.pricing);
-        skill.duration = options.duration;
-        skill.zone = options.zone;
-        skill.status = "Finished";
-        await skill_1.Skill.save(skill);
-        return {
-            skill,
-        };
-    }
-    async deleteSkill(skillId, { req }) {
-        const worker = await worker_1.Worker.findOne({ id: req.session.userId });
-        const skill = await skill_1.Skill.findOne({ id: skillId });
-        if (!req.session.userId || req.session.userId != (worker === null || worker === void 0 ? void 0 : worker.id)) {
-            throw new Error("Not authenticated");
-        }
-        if (!skill) {
-            return false;
-        }
-        worker.skillsIds.forEach((skillId, idx) => {
-            if (skillId == skill.id) {
-                worker.skillsIds.splice(idx, 1);
+    createSkillS1(options, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
+                throw new Error("Not authenticated");
             }
-        });
-        await worker_1.Worker.save(worker);
-        await skill_1.Skill.delete({ id: skillId });
-        return true;
-    }
-    async getSkills(workerId, { req }) {
-        const skills = await skill_1.Skill.find({ where: { workerId: workerId } });
-        if (!skills) {
-            return [];
-        }
-        return skills;
-    }
-    async getSkill(skillId) {
-        const skill = await skill_1.Skill.findOne({ id: skillId });
-        if (!skill) {
-            return null;
-        }
-        return skill;
-    }
-    async getSkillByTitle(title, workerId) {
-        const skill = await skill_1.Skill.findOne({
-            where: { title: title.replace(/_/g, " "), workerId: workerId },
-        });
-        if (!skill) {
-            return null;
-        }
-        return skill;
-    }
-    async getSkillCount() {
-        const count = await skill_1.Skill.find({});
-        return count;
-    }
-    async searchSkills(category, city, keyword, orderBy, limit, skip) {
-        let whereClause = "WHERE ";
-        let orderClause = "ORDER BY ";
-        const validCriterias = [
-            { type: "keyword", value: keyword },
-            { type: "category", value: category },
-            { type: "zone", value: city },
-        ].filter((e) => {
-            return !(e.value == "");
-        });
-        let replacements = [];
-        if (validCriterias.length == 1) {
-            if (validCriterias[0].type == "keyword") {
-                whereClause += `("description" LIKE $1  OR "title" LIKE $1 )`;
-                replacements.push(`%${validCriterias[0].value}%`);
+            const errors = (0, validateInput_1.validateSkillCreationS1)(options);
+            if (errors) {
+                return { errors };
+            }
+            const worker = yield worker_1.Worker.findOne({ id: req.session.userId });
+            if (!worker) {
+                throw new Error("Regular users cannot create skills");
+            }
+            const skill = yield skill_1.Skill.create({
+                workerId: req.session.userId,
+                category: options.category,
+                title: options.title,
+                zone: options.zone,
+                rating: worker.rating,
+                ratingsNumber: worker.ratingsNumber,
+                worker: worker.userName,
+                workerPicUrl: worker.profilePicture,
+                status: "Pending",
+                pictures: ["", "", "", ""],
+            });
+            yield skill_1.Skill.save(skill);
+            if (!worker.skillsIds) {
+                worker.skillsIds = [skill.id];
             }
             else {
-                whereClause += `"${validCriterias[0].type}" = $1`;
-                replacements.push(validCriterias[0].value);
+                worker.skillsIds.push(skill.id);
             }
-        }
-        else if (validCriterias.length > 1) {
-            if (validCriterias[0].type == "keyword") {
-                whereClause += `("description" LIKE $1  OR "title" LIKE $1 )`;
-                replacements.push(`%${validCriterias[0].value}%`);
-                for (let i = 1; i < validCriterias.length; i++) {
-                    whereClause += ` AND "${validCriterias[i].type}" = $${i + 1} `;
-                    replacements.push(validCriterias[i].value);
+            yield worker_1.Worker.save(worker);
+            return {
+                skill,
+            };
+        });
+    }
+    createSkillS2(options, skillId, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
+                throw new Error("Not authenticated");
+            }
+            const errors = (0, validateInput_1.validateSkillCreationS2)(options);
+            if (errors) {
+                return { errors };
+            }
+            const skill = yield skill_1.Skill.findOne({ id: skillId });
+            if (!skill) {
+                throw new Error("This skill does'nt exist");
+            }
+            if (skill.workerId != req.session.userId) {
+                throw new Error("You don't have access to this skill");
+            }
+            const worker = yield worker_1.Worker.findOne({ id: req.session.userId });
+            if (!worker) {
+                throw new Error("Not authenticated");
+            }
+            skill.description = options.description;
+            yield skill_1.Skill.save(skill);
+            return {
+                skill,
+            };
+        });
+    }
+    createSkillS3(options, skillId, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
+                throw new Error("Not authenticated");
+            }
+            const errors = (0, validateInput_1.validateSkillCreationS3)(options);
+            if (errors) {
+                return { errors };
+            }
+            const skill = yield skill_1.Skill.findOne({ id: skillId });
+            if (!skill) {
+                throw new Error("This skill does'nt exist");
+            }
+            if (skill.workerId != req.session.userId) {
+                throw new Error("You don't have access to this skill");
+            }
+            const worker = yield worker_1.Worker.findOne({ id: req.session.userId });
+            if (!worker) {
+                throw new Error("Not authenticated");
+            }
+            skill.duration = options.duration;
+            skill.pricing = parseInt(options.pricing);
+            skill.status = "Finished";
+            yield skill_1.Skill.save(skill);
+            return {
+                skill,
+            };
+        });
+    }
+    updateSkill(options, skillId, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const worker = yield worker_1.Worker.findOne({ id: req.session.userId });
+            if (!req.session.userId || req.session.userId != (worker === null || worker === void 0 ? void 0 : worker.id)) {
+                throw new Error("Not authenticated");
+            }
+            const errors = (0, validateInput_1.validateSkillUpdate)(options);
+            if (errors) {
+                return { errors };
+            }
+            const skill = yield skill_1.Skill.findOne({ id: skillId });
+            if (!skill) {
+                throw new Error("no skill found");
+            }
+            skill.category = options.category;
+            skill.title = options.title;
+            skill.description = options.description;
+            skill.pricing = parseInt(options.pricing);
+            skill.duration = options.duration;
+            skill.zone = options.zone;
+            skill.status = "Finished";
+            yield skill_1.Skill.save(skill);
+            return {
+                skill,
+            };
+        });
+    }
+    deleteSkill(skillId, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const worker = yield worker_1.Worker.findOne({ id: req.session.userId });
+            const skill = yield skill_1.Skill.findOne({ id: skillId });
+            if (!req.session.userId || req.session.userId != (worker === null || worker === void 0 ? void 0 : worker.id)) {
+                throw new Error("Not authenticated");
+            }
+            if (!skill) {
+                return false;
+            }
+            worker.skillsIds.forEach((skillId, idx) => {
+                if (skillId == skill.id) {
+                    worker.skillsIds.splice(idx, 1);
+                }
+            });
+            yield worker_1.Worker.save(worker);
+            yield skill_1.Skill.delete({ id: skillId });
+            return true;
+        });
+    }
+    getSkills(workerId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const skills = yield skill_1.Skill.find({ where: { workerId: workerId } });
+            if (!skills) {
+                return [];
+            }
+            return skills;
+        });
+    }
+    getSkill(skillId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const skill = yield skill_1.Skill.findOne({ id: skillId });
+            if (!skill) {
+                return null;
+            }
+            return skill;
+        });
+    }
+    getSkillByTitle(title, workerId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const skill = yield skill_1.Skill.findOne({
+                where: { title: title.replace(/_/g, " "), workerId: workerId },
+            });
+            if (!skill) {
+                return null;
+            }
+            return skill;
+        });
+    }
+    getSkillCount() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const count = yield skill_1.Skill.find({});
+            return count;
+        });
+    }
+    searchSkills(category, city, keyword, orderBy, limit, skip) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let whereClause = "WHERE ";
+            let orderClause = "ORDER BY ";
+            const validCriterias = [
+                { type: "keyword", value: keyword },
+                { type: "category", value: category },
+                { type: "zone", value: city },
+            ].filter((e) => {
+                return !(e.value == "");
+            });
+            let replacements = [];
+            if (validCriterias.length == 1) {
+                if (validCriterias[0].type == "keyword") {
+                    whereClause += `("description" LIKE $1  OR "title" LIKE $1 )`;
+                    replacements.push(`%${validCriterias[0].value}%`);
+                }
+                else {
+                    whereClause += `"${validCriterias[0].type}" = $1`;
+                    replacements.push(validCriterias[0].value);
                 }
             }
-            else {
-                whereClause += `"${validCriterias[0].type}" = $1`;
-                replacements.push(validCriterias[0].value);
-                for (let i = 1; i < validCriterias.length; i++) {
-                    whereClause += ` AND "${validCriterias[i].type}" = $${i + 1} `;
-                    replacements.push(validCriterias[i].value);
+            else if (validCriterias.length > 1) {
+                if (validCriterias[0].type == "keyword") {
+                    whereClause += `("description" LIKE $1  OR "title" LIKE $1 )`;
+                    replacements.push(`%${validCriterias[0].value}%`);
+                    for (let i = 1; i < validCriterias.length; i++) {
+                        whereClause += ` AND "${validCriterias[i].type}" = $${i + 1} `;
+                        replacements.push(validCriterias[i].value);
+                    }
+                }
+                else {
+                    whereClause += `"${validCriterias[0].type}" = $1`;
+                    replacements.push(validCriterias[0].value);
+                    for (let i = 1; i < validCriterias.length; i++) {
+                        whereClause += ` AND "${validCriterias[i].type}" = $${i + 1} `;
+                        replacements.push(validCriterias[i].value);
+                    }
                 }
             }
-        }
-        whereClause += ` AND "status" = 'Finished'`;
-        if (orderBy == "rating") {
-            orderClause += `"rating" DESC`;
-        }
-        else if (orderBy == "delivery time") {
-            orderClause += `"duration" ASC`;
-        }
-        else if (orderBy == "pricing") {
-            orderClause += `"pricing" ASC`;
-        }
-        const query = `
+            if (orderBy == "rating") {
+                orderClause += `"rating" DESC`;
+            }
+            else if (orderBy == "delivery time") {
+                orderClause += `"duration" ASC`;
+            }
+            else if (orderBy == "pricing") {
+                orderClause += `"pricing" ASC`;
+            }
+            const query = `
     SELECT * from public.skill
     ${whereClause}
     ${orderClause}
+    LIMIT ${limit} OFFSET ${skip}
   `;
-        const skills = await (0, typeorm_1.getConnection)().query(query, replacements);
-        skills.forEach((skill) => {
-            skill.pictures = skill.pictures.split(",");
+            const skills = yield (0, typeorm_1.getConnection)().query(query, replacements);
+            skills.forEach((skill) => {
+                skill.pictures = skill.pictures.split(",");
+            });
+            return skills;
         });
-        return skills;
     }
 };
 __decorate([
@@ -374,9 +403,8 @@ __decorate([
 __decorate([
     (0, type_graphql_1.Query)(() => [skill_1.Skill]),
     __param(0, (0, type_graphql_1.Arg)("workerId", () => String)),
-    __param(1, (0, type_graphql_1.Ctx)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], SkillResolver.prototype, "getSkills", null);
 __decorate([

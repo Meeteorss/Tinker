@@ -27,7 +27,9 @@ __decorate([
     __metadata("design:type", String)
 ], Rating.prototype, "userId", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => user_1.User, user => user.ratings, { cascade: ["update", "insert"] }),
+    (0, typeorm_1.ManyToOne)(() => user_1.User, (user) => user.ratings, {
+        cascade: ["update", "insert"],
+    }),
     __metadata("design:type", user_1.User)
 ], Rating.prototype, "user", void 0);
 __decorate([

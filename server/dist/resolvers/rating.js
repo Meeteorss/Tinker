@@ -11,6 +11,15 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RatingResolver = void 0;
 const rating_1 = require("../entities/rating");
@@ -31,49 +40,51 @@ var RatingValues;
     description: "Values that a rating can take",
 });
 let RatingResolver = class RatingResolver {
-    async rate(workerId, value, { req }) {
-        const user = await user_1.User.findOne({ id: req.session.userId });
-        if (!user) {
-            return false;
-        }
-        const worker = await worker_1.Worker.findOne({
-            id: workerId,
-        });
-        if (!worker) {
-            return false;
-        }
-        const r = await rating_1.Rating.findOne({
-            where: { userId: req.session.userId, workerId: workerId },
-        });
-        if (r) {
-            worker.ratingsValue = worker.ratingsValue - r.value + value;
-            worker.rating = worker.ratingsValue / worker.ratingsNumber;
-            const skills = await skill_1.Skill.findByIds(worker.skillsIds);
-            skills.forEach((skill) => {
-                skill.rating = worker.rating;
-                skill.ratingsNumber = worker.ratingsNumber;
+    rate(workerId, value, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield user_1.User.findOne({ id: req.session.userId });
+            if (!user) {
+                return false;
+            }
+            const worker = yield worker_1.Worker.findOne({
+                id: workerId,
             });
-            await skill_1.Skill.save(skills);
-            r.value = value;
-            await rating_1.Rating.save(r);
-            await worker_1.Worker.save(worker);
-            return true;
-        }
-        else {
-            const rating = rating_1.Rating.create({ userId: user.id, workerId, value });
-            await rating_1.Rating.insert(rating);
-            worker.ratingsValue += value;
-            worker.ratingsNumber++;
-            worker.rating = worker.ratingsValue / worker.ratingsNumber;
-            await worker_1.Worker.save(worker);
-            const skills = await skill_1.Skill.findByIds(worker.skillsIds);
-            skills.forEach((skill) => {
-                skill.rating = worker.rating;
-                skill.ratingsNumber = worker.ratingsNumber;
+            if (!worker) {
+                return false;
+            }
+            const r = yield rating_1.Rating.findOne({
+                where: { userId: req.session.userId, workerId: workerId },
             });
-            await skill_1.Skill.save(skills);
-            return true;
-        }
+            if (r) {
+                worker.ratingsValue = worker.ratingsValue - r.value + value;
+                worker.rating = worker.ratingsValue / worker.ratingsNumber;
+                const skills = yield skill_1.Skill.findByIds(worker.skillsIds);
+                skills.forEach((skill) => {
+                    skill.rating = worker.rating;
+                    skill.ratingsNumber = worker.ratingsNumber;
+                });
+                yield skill_1.Skill.save(skills);
+                r.value = value;
+                yield rating_1.Rating.save(r);
+                yield worker_1.Worker.save(worker);
+                return true;
+            }
+            else {
+                const rating = rating_1.Rating.create({ userId: user.id, workerId, value });
+                yield rating_1.Rating.insert(rating);
+                worker.ratingsValue += value;
+                worker.ratingsNumber++;
+                worker.rating = worker.ratingsValue / worker.ratingsNumber;
+                yield worker_1.Worker.save(worker);
+                const skills = yield skill_1.Skill.findByIds(worker.skillsIds);
+                skills.forEach((skill) => {
+                    skill.rating = worker.rating;
+                    skill.ratingsNumber = worker.ratingsNumber;
+                });
+                yield skill_1.Skill.save(skills);
+                return true;
+            }
+        });
     }
 };
 __decorate([

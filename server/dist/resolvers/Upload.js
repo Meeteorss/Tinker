@@ -11,6 +11,15 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UploadResolver = void 0;
 const client_s3_1 = require("@aws-sdk/client-s3");
@@ -45,148 +54,160 @@ S3SignResponse = __decorate([
     (0, type_graphql_1.ObjectType)()
 ], S3SignResponse);
 let UploadResolver = class UploadResolver {
-    async uploadProfilePicture(fileName, fileType, { req }) {
-        const user = await user_1.User.findOne({
-            id: req.session.userId,
-        });
-        if (!user) {
-            return {
-                error: "Not authenticated",
+    uploadProfilePicture(fileName, fileType, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield user_1.User.findOne({
+                id: req.session.userId,
+            });
+            if (!user) {
+                return {
+                    error: "Not authenticated",
+                };
+            }
+            const s3Params = {
+                Bucket: bucketName,
+                Key: `profilepic/${fileName}`,
+                contentType: fileType,
             };
-        }
-        const s3Params = {
-            Bucket: bucketName,
-            Key: `profilepic/${fileName}`,
-            contentType: fileType,
-        };
-        await s3_1.s3.send(new client_s3_1.PutObjectCommand(s3Params));
-        const signedS3Url = await (0, s3_request_presigner_1.getSignedUrl)(s3_1.s3, new client_s3_1.PutObjectCommand(s3Params), {
-            expiresIn: 50000,
+            yield s3_1.s3.send(new client_s3_1.PutObjectCommand(s3Params));
+            const signedS3Url = yield (0, s3_request_presigner_1.getSignedUrl)(s3_1.s3, new client_s3_1.PutObjectCommand(s3Params), {
+                expiresIn: 50000,
+            });
+            const objectUrl = `https://${bucketName}.s3.amazonaws.com/profilepic/${fileName}`;
+            return {
+                error: null,
+                signedS3Url: signedS3Url,
+                objectUrl: objectUrl,
+            };
         });
-        const objectUrl = `https://${bucketName}.s3.amazonaws.com/profilepic/${fileName}`;
-        return {
-            error: null,
-            signedS3Url: signedS3Url,
-            objectUrl: objectUrl,
-        };
     }
-    async addProfilePicture(pictureUrl, { req }) {
-        const user = await user_1.User.findOne({
-            id: req.session.userId,
+    addProfilePicture(pictureUrl, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield user_1.User.findOne({
+                id: req.session.userId,
+            });
+            if (!user) {
+                return false;
+            }
+            if (user.isWorker) {
+                user.profilePicture = pictureUrl;
+                yield worker_1.Worker.update({ id: req.session.userId }, { profilePicture: pictureUrl });
+                yield user_1.User.save(user);
+                return true;
+            }
+            else {
+                user.profilePicture = pictureUrl;
+                yield user_1.User.save(user);
+                return true;
+            }
         });
-        if (!user) {
-            return false;
-        }
-        if (user.isWorker) {
-            user.profilePicture = pictureUrl;
-            await worker_1.Worker.update({ id: req.session.userId }, { profilePicture: pictureUrl });
-            await user_1.User.save(user);
-            return true;
-        }
-        else {
-            user.profilePicture = pictureUrl;
-            await user_1.User.save(user);
-            return true;
-        }
     }
-    async deleteProfilePicture({ req }) {
-        const user = await user_1.User.findOne({ id: req.session.userId });
-        if (!user) {
-            return false;
-        }
-        const s3Params = {
-            Bucket: bucketName,
-            Key: `${user.profilePicture.split(".com/")[1]}`,
-        };
-        await s3_1.s3.send(new client_s3_1.DeleteObjectCommand(s3Params));
-        if (user.isWorker) {
-            user.profilePicture = "";
-            await user_1.User.save(user);
-            await worker_1.Worker.update({ id: req.session.userId }, { profilePicture: "" });
-            return true;
-        }
-        else {
-            user.profilePicture = "";
-            await user_1.User.save(user);
-            return true;
-        }
+    deleteProfilePicture({ req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield user_1.User.findOne({ id: req.session.userId });
+            if (!user) {
+                return false;
+            }
+            const s3Params = {
+                Bucket: bucketName,
+                Key: `${user.profilePicture.split(".com/")[1]}`,
+            };
+            yield s3_1.s3.send(new client_s3_1.DeleteObjectCommand(s3Params));
+            if (user.isWorker) {
+                user.profilePicture = "";
+                yield user_1.User.save(user);
+                yield worker_1.Worker.update({ id: req.session.userId }, { profilePicture: "" });
+                return true;
+            }
+            else {
+                user.profilePicture = "";
+                yield user_1.User.save(user);
+                return true;
+            }
+        });
     }
-    async uploadPicture(fileName, fileType, skillId, { req }) {
+    uploadPicture(fileName, fileType, skillId, { req }) {
         var _a;
-        const worker = await worker_1.Worker.findOne({
-            id: req.session.userId,
+        return __awaiter(this, void 0, void 0, function* () {
+            const worker = yield worker_1.Worker.findOne({
+                id: req.session.userId,
+            });
+            const skill = yield skill_1.Skill.findOne({ id: skillId });
+            if (!skill) {
+                return {
+                    error: "Skill not found",
+                };
+            }
+            if (!worker) {
+                return {
+                    error: "Not authenticated",
+                };
+            }
+            if (skill.workerId != req.session.userId) {
+                return {
+                    error: "You don't have permissions for this action",
+                };
+            }
+            if (((_a = skill.pictures) === null || _a === void 0 ? void 0 : _a.length) > 4) {
+                return {
+                    error: "you can't upload more than 4 pictures",
+                };
+            }
+            const s3Params = {
+                Bucket: bucketName,
+                Key: `publicPics/${fileName}`,
+                contentType: fileType,
+            };
+            yield s3_1.s3.send(new client_s3_1.PutObjectCommand(s3Params));
+            const signedS3Url = yield (0, s3_request_presigner_1.getSignedUrl)(s3_1.s3, new client_s3_1.PutObjectCommand(s3Params), {
+                expiresIn: 5000,
+            });
+            const objectUrl = `https://${bucketName}.s3.amazonaws.com/publicPics/${fileName}`;
+            return {
+                error: null,
+                signedS3Url: signedS3Url,
+                objectUrl: objectUrl,
+            };
         });
-        const skill = await skill_1.Skill.findOne({ id: skillId });
-        if (!skill) {
-            return {
-                error: "Skill not found",
-            };
-        }
-        if (!worker) {
-            return {
-                error: "Not authenticated",
-            };
-        }
-        if (skill.workerId != req.session.userId) {
-            return {
-                error: "You don't have permissions for this action",
-            };
-        }
-        if (((_a = skill.pictures) === null || _a === void 0 ? void 0 : _a.length) > 4) {
-            return {
-                error: "you can't upload more than 4 pictures",
-            };
-        }
-        const s3Params = {
-            Bucket: bucketName,
-            Key: `publicPics/${fileName}`,
-            contentType: fileType,
-        };
-        await s3_1.s3.send(new client_s3_1.PutObjectCommand(s3Params));
-        const signedS3Url = await (0, s3_request_presigner_1.getSignedUrl)(s3_1.s3, new client_s3_1.PutObjectCommand(s3Params), {
-            expiresIn: 5000,
-        });
-        const objectUrl = `https://${bucketName}.s3.amazonaws.com/publicPics/${fileName}`;
-        return {
-            error: null,
-            signedS3Url: signedS3Url,
-            objectUrl: objectUrl,
-        };
     }
-    async addPicture(pictureUrl, skillId, index, { req }) {
-        const worker = await worker_1.Worker.findOne({
-            id: req.session.userId,
+    addPicture(pictureUrl, skillId, index, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const worker = yield worker_1.Worker.findOne({
+                id: req.session.userId,
+            });
+            const skill = yield skill_1.Skill.findOne({ id: skillId });
+            if (!worker) {
+                return false;
+            }
+            if (!skill) {
+                return false;
+            }
+            skill.pictures[index] = pictureUrl;
+            yield skill_1.Skill.save(skill);
+            return true;
         });
-        const skill = await skill_1.Skill.findOne({ id: skillId });
-        if (!worker) {
-            return false;
-        }
-        if (!skill) {
-            return false;
-        }
-        skill.pictures[index] = pictureUrl;
-        await skill_1.Skill.save(skill);
-        return true;
     }
-    async deletePicture(index, skillId, { req }) {
-        const worker = await worker_1.Worker.findOne({
-            id: req.session.userId,
+    deletePicture(index, skillId, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const worker = yield worker_1.Worker.findOne({
+                id: req.session.userId,
+            });
+            const skill = yield skill_1.Skill.findOne({ id: skillId });
+            if (!worker) {
+                return false;
+            }
+            if (!skill) {
+                return false;
+            }
+            const s3Params = {
+                Bucket: bucketName,
+                Key: `${skill.pictures[index].split(".com/")[1]}`,
+            };
+            yield s3_1.s3.send(new client_s3_1.DeleteObjectCommand(s3Params));
+            skill.pictures[index] = "";
+            yield skill_1.Skill.save(skill);
+            return true;
         });
-        const skill = await skill_1.Skill.findOne({ id: skillId });
-        if (!worker) {
-            return false;
-        }
-        if (!skill) {
-            return false;
-        }
-        const s3Params = {
-            Bucket: bucketName,
-            Key: `${skill.pictures[index].split(".com/")[1]}`,
-        };
-        await s3_1.s3.send(new client_s3_1.DeleteObjectCommand(s3Params));
-        skill.pictures[index] = "";
-        await skill_1.Skill.save(skill);
-        return true;
     }
 };
 __decorate([
@@ -246,4 +267,4 @@ UploadResolver = __decorate([
     (0, type_graphql_1.Resolver)()
 ], UploadResolver);
 exports.UploadResolver = UploadResolver;
-//# sourceMappingURL=Upload.js.map
+//# sourceMappingURL=upload.js.map

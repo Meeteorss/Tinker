@@ -11,6 +11,15 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -101,101 +110,109 @@ LoginInput = __decorate([
 ], LoginInput);
 exports.LoginInput = LoginInput;
 let UserResolver = class UserResolver {
-    async me({ req }) {
-        if (!req.session.userId) {
-            return null;
-        }
-        const user = await user_1.User.findOne({
-            id: req.session.userId,
+    me({ req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
+                return null;
+            }
+            const user = yield user_1.User.findOne({
+                id: req.session.userId,
+            });
+            return user;
         });
-        return user;
     }
-    async register(options, { req }) {
-        const errors = (0, validateRegister_1.validateRegister)(options);
-        if (errors) {
-            return { errors };
-        }
-        const hashedPassword = await argon2_1.default.hash(options.password);
-        const user = user_1.User.create({
-            firstName: options.firstName,
-            lastName: options.lastName,
-            userName: options.userName,
-            email: options.email,
-            password: hashedPassword,
+    register(options, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const errors = (0, validateRegister_1.validateRegister)(options);
+            if (errors) {
+                return { errors };
+            }
+            const hashedPassword = yield argon2_1.default.hash(options.password);
+            const user = user_1.User.create({
+                firstName: options.firstName,
+                lastName: options.lastName,
+                userName: options.userName,
+                email: options.email,
+                password: hashedPassword,
+            });
+            try {
+                yield user_1.User.save(user);
+            }
+            catch (err) {
+                if (err.detail.includes("already exists") &&
+                    err.detail.includes("email")) {
+                    return {
+                        errors: [
+                            {
+                                field: "email",
+                                message: "Email est déjà utilisé",
+                            },
+                        ],
+                    };
+                }
+                if (err.detail.includes("already exists") &&
+                    err.detail.includes("userName")) {
+                    return {
+                        errors: [
+                            {
+                                field: "userName",
+                                message: "Nom d'utilisateur est déjà utilisé",
+                            },
+                        ],
+                    };
+                }
+            }
+            yield (0, nodemailer_1.sendConfirmationEmail)(user.email, yield (0, nodemailer_1.createConfirmationUrl)(user.id));
+            req.session.userId = user.id;
+            return {
+                user,
+            };
         });
-        try {
-            await user_1.User.save(user);
-        }
-        catch (err) {
-            if (err.detail.includes("already exists") &&
-                err.detail.includes("email")) {
+    }
+    sendConfirmationEmail({ req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
+                throw new Error("Not authenticated");
+            }
+            const user = yield user_1.User.findOne({ id: req.session.userId });
+            if (!user) {
+                throw new Error("User does not exist");
+            }
+            yield (0, nodemailer_1.sendConfirmationEmail)(user.email, yield (0, nodemailer_1.createConfirmationUrl)(user.id));
+            return true;
+        });
+    }
+    login(options, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield user_1.User.findOne({
+                email: options.email,
+            });
+            if (!user) {
                 return {
                     errors: [
                         {
-                            field: "email",
-                            message: "Email already used",
+                            field: "password",
+                            message: "Identifiants incorrectes.",
                         },
                     ],
                 };
             }
-            if (err.detail.includes("already exists") &&
-                err.detail.includes("userName")) {
+            const validPassword = yield argon2_1.default.verify(user.password, options.password);
+            if (!validPassword) {
                 return {
                     errors: [
                         {
-                            field: "userName",
-                            message: "username already used",
+                            field: "password",
+                            message: "Identifiants incorrectes.",
                         },
                     ],
                 };
             }
-        }
-        await (0, nodemailer_1.sendConfirmationEmail)(user.email, await (0, nodemailer_1.createConfirmationUrl)(user.id));
-        req.session.userId = user.id;
-        return {
-            user,
-        };
-    }
-    async sendConfirmationEmail({ req }) {
-        if (!req.session.userId) {
-            throw new Error("Not authenticated");
-        }
-        const user = await user_1.User.findOne({ id: req.session.userId });
-        if (!user) {
-            throw new Error("User does not exist");
-        }
-        await (0, nodemailer_1.sendConfirmationEmail)(user.email, await (0, nodemailer_1.createConfirmationUrl)(user.id));
-        return true;
-    }
-    async login(options, { req }) {
-        const user = await user_1.User.findOne({
-            email: options.email,
+            req.session.userId = user.id;
+            return {
+                user: user,
+            };
         });
-        if (!user) {
-            return {
-                errors: [
-                    {
-                        field: "password",
-                        message: "Identifiants incorrectes.",
-                    },
-                ],
-            };
-        }
-        const validPassword = await argon2_1.default.verify(user.password, options.password);
-        if (!validPassword) {
-            return {
-                errors: [
-                    {
-                        field: "password",
-                        message: "Identifiants incorrectes.",
-                    },
-                ],
-            };
-        }
-        req.session.userId = user.id;
-        return {
-            user: user,
-        };
     }
     logout({ req, res }) {
         return new Promise((resolve) => req.session.destroy((err) => {
@@ -208,186 +225,198 @@ let UserResolver = class UserResolver {
             resolve(true);
         }));
     }
-    async confirmUser(token, { redis }) {
-        const userId = await redis.get(token);
-        if (!userId) {
-            return false;
-        }
-        await user_1.User.update({ id: userId }, { confirmed: true });
-        await redis.del(token);
-        return true;
-    }
-    async changeEmail(email, { req }) {
-        const user = await user_1.User.findOne({ id: req.session.userId });
-        const worker = await worker_1.Worker.findOne({ id: req.session.userId });
-        if (!user || !worker) {
-            throw new Error("User not found");
-        }
-        if (user.email == email) {
-            throw new Error("You can't change it to your current email");
-        }
-        if (!(0, validateRegister_1.validateEmail)(email)) {
-            throw new Error("Invalid email");
-        }
-        else {
-            await user_1.User.update({ id: req.session.userId }, { email: email });
-            await worker_1.Worker.update({ id: req.session.userId }, { email: email });
+    confirmUser(token, { redis }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const userId = yield redis.get(token);
+            if (!userId) {
+                return false;
+            }
+            yield user_1.User.update({ id: userId }, { confirmed: true });
+            yield redis.del(token);
             return true;
-        }
+        });
     }
-    async confirmPassword(password, { req }) {
-        const user = await user_1.User.findOne({ id: req.session.userId });
-        if (!user) {
-            return {
-                errors: [
-                    {
-                        field: "password",
-                        message: "User not found",
-                    },
-                ],
-            };
-        }
-        const validPassword = await argon2_1.default.verify(user.password, password);
-        if (!validPassword) {
-            return {
-                errors: [
-                    {
-                        field: "password",
-                        message: "Password incorrect",
-                    },
-                ],
-            };
-        }
-        return user;
+    changeEmail(email, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield user_1.User.findOne({ id: req.session.userId });
+            const worker = yield worker_1.Worker.findOne({ id: req.session.userId });
+            if (!user || !worker) {
+                throw new Error("User not found");
+            }
+            if (user.email == email) {
+                throw new Error("You can't change it to your current email");
+            }
+            if (!(0, validateRegister_1.validateEmail)(email)) {
+                throw new Error("Invalid email");
+            }
+            else {
+                yield user_1.User.update({ id: req.session.userId }, { email: email });
+                yield worker_1.Worker.update({ id: req.session.userId }, { email: email });
+                return true;
+            }
+        });
     }
-    async forgetPassword(email, { redis }) {
-        const user = await user_1.User.findOne({ email: email });
-        if (!user) {
+    confirmPassword(password, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield user_1.User.findOne({ id: req.session.userId });
+            if (!user) {
+                return {
+                    errors: [
+                        {
+                            field: "password",
+                            message: "User not found",
+                        },
+                    ],
+                };
+            }
+            const validPassword = yield argon2_1.default.verify(user.password, password);
+            if (!validPassword) {
+                return {
+                    errors: [
+                        {
+                            field: "password",
+                            message: "Password incorrect",
+                        },
+                    ],
+                };
+            }
+            return user;
+        });
+    }
+    forgetPassword(email, { redis }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield user_1.User.findOne({ email: email });
+            if (!user) {
+                return true;
+            }
+            const token = (0, uuid_1.v4)();
+            yield redis.set("forgot_password" + token, user.id, "ex", 60 * 60 * 2);
+            yield (0, nodemailer_1.sendFPEmail)(user.email, token);
             return true;
-        }
-        const token = (0, uuid_1.v4)();
-        await redis.set("forgot_password" + token, user.id, "ex", 60 * 60 * 2);
-        await (0, nodemailer_1.sendFPEmail)(user.email, token);
-        return true;
+        });
     }
-    async changePassword(token, password, confirmedPassword, { redis, req }) {
-        if (password.length <= 2) {
-            return {
-                errors: [
-                    {
-                        field: "password",
-                        message: "length must be greater than 2",
-                    },
-                ],
-            };
-        }
-        if (confirmedPassword != password) {
-            return {
-                errors: [
-                    {
-                        field: "confirmedPassword",
-                        message: "Passwords did not match",
-                    },
-                ],
-            };
-        }
-        const userId = await redis.get("forgot_password" + token);
-        if (!userId) {
-            return {
-                errors: [
-                    {
-                        field: "token",
-                        message: "Invalid request",
-                    },
-                ],
-            };
-        }
-        const user = await user_1.User.findOne({ id: userId });
-        if (!user) {
-            return {
-                errors: [
-                    {
-                        field: "token",
-                        message: "User does'nt exist",
-                    },
-                ],
-            };
-        }
-        const validPassword = await argon2_1.default.verify(user.password, password);
-        if (validPassword) {
-            return {
-                errors: [
-                    {
-                        field: "password",
-                        message: "You should enter a different password than the current one",
-                    },
-                ],
-            };
-        }
-        const hashedPassword = await argon2_1.default.hash(password);
-        await user_1.User.update({ id: userId }, { password: hashedPassword });
-        await worker_1.Worker.update({ id: userId }, { password: hashedPassword });
-        await redis.del("forgot_password" + token);
-        req.session.userId = user.id;
-        return { user };
+    changePassword(token, password, confirmedPassword, { redis, req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (password.length <= 2) {
+                return {
+                    errors: [
+                        {
+                            field: "password",
+                            message: "length must be greater than 2",
+                        },
+                    ],
+                };
+            }
+            if (confirmedPassword != password) {
+                return {
+                    errors: [
+                        {
+                            field: "confirmedPassword",
+                            message: "Passwords did not match",
+                        },
+                    ],
+                };
+            }
+            const userId = yield redis.get("forgot_password" + token);
+            if (!userId) {
+                return {
+                    errors: [
+                        {
+                            field: "token",
+                            message: "Invalid request",
+                        },
+                    ],
+                };
+            }
+            const user = yield user_1.User.findOne({ id: userId });
+            if (!user) {
+                return {
+                    errors: [
+                        {
+                            field: "token",
+                            message: "User does'nt exist",
+                        },
+                    ],
+                };
+            }
+            const validPassword = yield argon2_1.default.verify(user.password, password);
+            if (validPassword) {
+                return {
+                    errors: [
+                        {
+                            field: "password",
+                            message: "You should enter a different password than the current one",
+                        },
+                    ],
+                };
+            }
+            const hashedPassword = yield argon2_1.default.hash(password);
+            yield user_1.User.update({ id: userId }, { password: hashedPassword });
+            yield worker_1.Worker.update({ id: userId }, { password: hashedPassword });
+            yield redis.del("forgot_password" + token);
+            req.session.userId = user.id;
+            return { user };
+        });
     }
-    async changePasswordFromProfil(oldPassword, password, confirmedPassword, { req }) {
-        if (password.length <= 2) {
-            return {
-                errors: [
-                    {
-                        field: "password",
-                        message: "length must be greater than 2",
-                    },
-                ],
-            };
-        }
-        if (confirmedPassword != password) {
-            return {
-                errors: [
-                    {
-                        field: "confirmedPassword",
-                        message: "Passwords did not match",
-                    },
-                ],
-            };
-        }
-        if (!req.session.userId) {
-            return {
-                errors: [
-                    {
-                        field: "password",
-                        message: "Not authenticated",
-                    },
-                ],
-            };
-        }
-        const user = await user_1.User.findOne({ id: req.session.userId });
-        if (!user) {
-            return {
-                errors: [
-                    {
-                        field: "password",
-                        message: "User does'nt exist",
-                    },
-                ],
-            };
-        }
-        const validPassword = await argon2_1.default.verify(user.password, oldPassword);
-        if (!validPassword) {
-            return {
-                errors: [
-                    {
-                        field: "oldPassword",
-                        message: "Incorrect password",
-                    },
-                ],
-            };
-        }
-        const hashedPassword = await argon2_1.default.hash(password);
-        await user_1.User.update({ id: req.session.userId }, { password: hashedPassword });
-        await worker_1.Worker.update({ id: req.session.userId }, { password: hashedPassword });
-        return { user };
+    changePasswordFromProfil(oldPassword, password, confirmedPassword, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (password.length <= 2) {
+                return {
+                    errors: [
+                        {
+                            field: "password",
+                            message: "length must be greater than 2",
+                        },
+                    ],
+                };
+            }
+            if (confirmedPassword != password) {
+                return {
+                    errors: [
+                        {
+                            field: "confirmedPassword",
+                            message: "Passwords did not match",
+                        },
+                    ],
+                };
+            }
+            if (!req.session.userId) {
+                return {
+                    errors: [
+                        {
+                            field: "password",
+                            message: "Not authenticated",
+                        },
+                    ],
+                };
+            }
+            const user = yield user_1.User.findOne({ id: req.session.userId });
+            if (!user) {
+                return {
+                    errors: [
+                        {
+                            field: "password",
+                            message: "User does'nt exist",
+                        },
+                    ],
+                };
+            }
+            const validPassword = yield argon2_1.default.verify(user.password, oldPassword);
+            if (!validPassword) {
+                return {
+                    errors: [
+                        {
+                            field: "oldPassword",
+                            message: "Incorrect password",
+                        },
+                    ],
+                };
+            }
+            const hashedPassword = yield argon2_1.default.hash(password);
+            yield user_1.User.update({ id: req.session.userId }, { password: hashedPassword });
+            yield worker_1.Worker.update({ id: req.session.userId }, { password: hashedPassword });
+            return { user };
+        });
     }
 };
 __decorate([

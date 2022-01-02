@@ -11,6 +11,15 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CommentResolver = void 0;
 const type_graphql_1 = require("type-graphql");
@@ -20,67 +29,73 @@ const comment_1 = require("../entities/comment");
 const skill_1 = require("../entities/skill");
 const typeorm_1 = require("typeorm");
 let CommentResolver = class CommentResolver {
-    async comment(skillId, content, { req }) {
-        const user = await user_1.User.findOne({ id: req.session.userId });
-        if (!user) {
-            return false;
-        }
-        const skill = await skill_1.Skill.findOne({ id: skillId });
-        if (!skill) {
-            return false;
-        }
-        const worker = await worker_1.Worker.findOne({
-            id: skill.workerId,
-        });
-        if (!worker) {
-            return false;
-        }
-        if (!content || content == "") {
-            return false;
-        }
-        if (worker.id == user.id) {
-            return false;
-        }
-        const com = await comment_1.Comment.findOne({
-            where: { userId: req.session.userId, skillId: skillId },
-        });
-        if (!com) {
-            const comment = comment_1.Comment.create({
-                userId: user.id,
-                author: user.userName,
-                worker: worker.userName,
-                workerId: worker.id,
-                skillId: skillId,
-                content: content,
+    comment(skillId, content, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield user_1.User.findOne({ id: req.session.userId });
+            if (!user) {
+                return false;
+            }
+            const skill = yield skill_1.Skill.findOne({ id: skillId });
+            if (!skill) {
+                return false;
+            }
+            const worker = yield worker_1.Worker.findOne({
+                id: skill.workerId,
             });
-            await comment_1.Comment.insert(comment);
-            return true;
-        }
-        else {
-            com.content = content;
-            await comment_1.Comment.save(com);
-            return true;
-        }
+            if (!worker) {
+                return false;
+            }
+            if (!content || content == "") {
+                return false;
+            }
+            if (worker.id == user.id) {
+                return false;
+            }
+            const com = yield comment_1.Comment.findOne({
+                where: { userId: req.session.userId, skillId: skillId },
+            });
+            if (!com) {
+                const comment = comment_1.Comment.create({
+                    userId: user.id,
+                    author: user.userName,
+                    worker: worker.userName,
+                    workerId: worker.id,
+                    skillId: skillId,
+                    content: content,
+                });
+                yield comment_1.Comment.insert(comment);
+                return true;
+            }
+            else {
+                com.content = content;
+                yield comment_1.Comment.save(com);
+                return true;
+            }
+        });
     }
-    async commentsBySkill(title, worker, limit, skip) {
-        const comments = await (0, typeorm_1.getConnection)().query(`
+    commentsBySkill(title, worker, limit, skip) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const comments = yield (0, typeorm_1.getConnection)().query(`
     select "c"."id","c"."content","c"."skillId","c"."userId","c"."author","c"."workerId","c"."worker" ,"c"."createdAt","c"."updatedAt" from comment as c
     left join "skill" as s on s.id::text = c."skillId"::text
 	  where s."title"::text = '${title.replace(/_/g, " ")}' AND  s."worker"::text = '${worker}'
     order by "c"."updatedAt" DESC,"c"."id" DESC 
     LIMIT ${limit} OFFSET ${skip}
      `);
-        return comments;
+            return comments;
+        });
     }
-    async commentsByWorker(worker, limit, skip) {
-        const comments = await (0, typeorm_1.getConnection)().query(`
+    commentsByWorker(worker, limit, skip) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const comments = yield (0, typeorm_1.getConnection)().query(`
     select "c"."id","c"."content","c"."skillId","c"."userId","c"."author","c"."workerId","c"."worker" ,"c"."createdAt","c"."updatedAt" from comment as c
     left join "worker" as w on w."id"::text = c."workerId"::text
 	  where w."userName"::text = '${worker}' 
     order by "c"."updatedAt" DESC,"c"."id" DESC
     LIMIT ${limit} OFFSET ${skip}
      `);
-        return comments;
+            return comments;
+        });
     }
 };
 __decorate([

@@ -118,7 +118,7 @@ export class UserResolver {
           errors: [
             {
               field: "email",
-              message: "Email already used",
+              message: "Email est déjà utilisé",
             },
           ],
         };
@@ -131,7 +131,7 @@ export class UserResolver {
           errors: [
             {
               field: "userName",
-              message: "username already used",
+              message: "Nom d'utilisateur est déjà utilisé",
             },
           ],
         };

@@ -11,6 +11,15 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FavoriteResolver = void 0;
 const type_graphql_1 = require("type-graphql");
@@ -20,91 +29,99 @@ const skill_1 = require("../entities/skill");
 const typeorm_1 = require("typeorm");
 const favorite_1 = require("../entities/favorite");
 let FavoriteResolver = class FavoriteResolver {
-    async favorite(workerId, { req }) {
-        if (!req.session.userId) {
-            throw new Error("Not authenticated");
-        }
-        const user = await user_1.User.findOne({ id: req.session.userId });
-        if (!user) {
-            throw new Error("User does not exist");
-        }
-        if (user.favoritesIds && user.favoritesIds.includes(workerId)) {
-            return true;
-        }
-        const worker = await worker_1.Worker.findOne({ id: workerId });
-        if (!worker) {
-            throw new Error("No tinker found");
-        }
-        const favorite = await favorite_1.Favorite.create({
-            userId: user.id,
-            workerId: workerId,
-        });
-        if (!user.favoritesIds) {
-            user.favoritesIds = [favorite.workerId];
-        }
-        else {
-            user.favoritesIds.push(favorite.workerId);
-        }
-        worker.favsCount++;
-        await (0, typeorm_1.getManager)().transaction(async (transactionalEntityManager) => {
-            await transactionalEntityManager.save(favorite);
-            await transactionalEntityManager.save(worker);
-            await transactionalEntityManager.save(user);
-        });
-        return true;
-    }
-    async unfavorite(workerId, { req }) {
-        if (!req.session.userId) {
-            throw new Error("Not authenticated");
-        }
-        const user = await user_1.User.findOne({ id: req.session.userId });
-        if (!user) {
-            throw new Error("User does not exist");
-        }
-        if (!user.favoritesIds || !user.favoritesIds.includes(workerId)) {
-            throw new Error("This tinker is not in your favorite tinkers list");
-        }
-        const worker = await worker_1.Worker.findOne({ id: workerId });
-        if (!worker) {
-            throw new Error("tinker does not exist");
-        }
-        user.favoritesIds = user.favoritesIds.filter((id) => {
-            return !(id == workerId);
-        });
-        worker.favsCount--;
-        await (0, typeorm_1.getManager)().transaction(async (transactionalEntityManager) => {
-            await transactionalEntityManager.delete(favorite_1.Favorite, {
+    favorite(workerId, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
+                throw new Error("Not authenticated");
+            }
+            const user = yield user_1.User.findOne({ id: req.session.userId });
+            if (!user) {
+                throw new Error("User does not exist");
+            }
+            if (user.favoritesIds && user.favoritesIds.includes(workerId)) {
+                return true;
+            }
+            const worker = yield worker_1.Worker.findOne({ id: workerId });
+            if (!worker) {
+                throw new Error("No tinker found");
+            }
+            const favorite = yield favorite_1.Favorite.create({
                 userId: user.id,
                 workerId: workerId,
             });
-            await transactionalEntityManager.save(worker);
-            await transactionalEntityManager.save(user);
+            if (!user.favoritesIds) {
+                user.favoritesIds = [favorite.workerId];
+            }
+            else {
+                user.favoritesIds.push(favorite.workerId);
+            }
+            worker.favsCount++;
+            yield (0, typeorm_1.getManager)().transaction((transactionalEntityManager) => __awaiter(this, void 0, void 0, function* () {
+                yield transactionalEntityManager.save(favorite);
+                yield transactionalEntityManager.save(worker);
+                yield transactionalEntityManager.save(user);
+            }));
+            return true;
         });
-        return true;
     }
-    async getFavoriteWorkers({ req }) {
-        if (!req.session.userId) {
-            throw new Error("Not authenticated");
-        }
-        const user = await user_1.User.findOne({ id: req.session.userId });
-        if (!user) {
-            throw new Error("User does not excist");
-        }
-        const workers = await (0, typeorm_1.getConnection)().query(`
+    unfavorite(workerId, { req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
+                throw new Error("Not authenticated");
+            }
+            const user = yield user_1.User.findOne({ id: req.session.userId });
+            if (!user) {
+                throw new Error("User does not exist");
+            }
+            if (!user.favoritesIds || !user.favoritesIds.includes(workerId)) {
+                throw new Error("This tinker is not in your favorite tinkers list");
+            }
+            const worker = yield worker_1.Worker.findOne({ id: workerId });
+            if (!worker) {
+                throw new Error("tinker does not exist");
+            }
+            user.favoritesIds = user.favoritesIds.filter((id) => {
+                return !(id == workerId);
+            });
+            worker.favsCount--;
+            yield (0, typeorm_1.getManager)().transaction((transactionalEntityManager) => __awaiter(this, void 0, void 0, function* () {
+                yield transactionalEntityManager.delete(favorite_1.Favorite, {
+                    userId: user.id,
+                    workerId: workerId,
+                });
+                yield transactionalEntityManager.save(worker);
+                yield transactionalEntityManager.save(user);
+            }));
+            return true;
+        });
+    }
+    getFavoriteWorkers({ req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
+                throw new Error("Not authenticated");
+            }
+            const user = yield user_1.User.findOne({ id: req.session.userId });
+            if (!user) {
+                throw new Error("User does not excist");
+            }
+            const workers = yield (0, typeorm_1.getConnection)().query(`
     select id,username,"profilePicture",f."userId" from worker
     left join "favorite" as f on worker.id::text = f."workerId"::text
 	  where f."userId"::text = '${user.id}' 
      `);
-        if (!workers) {
-            throw new Error("No favorite tinker found");
-        }
-        return workers;
-    }
-    async getFavsCount(workerId) {
-        const count = await favorite_1.Favorite.findAndCount({
-            where: { workerId: workerId },
+            if (!workers) {
+                throw new Error("No favorite tinker found");
+            }
+            return workers;
         });
-        return count[1];
+    }
+    getFavsCount(workerId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const count = yield favorite_1.Favorite.findAndCount({
+                where: { workerId: workerId },
+            });
+            return count[1];
+        });
     }
 };
 __decorate([

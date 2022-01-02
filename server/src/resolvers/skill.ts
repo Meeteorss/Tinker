@@ -272,10 +272,7 @@ export class SkillResolver {
   }
 
   @Query(() => [Skill])
-  async getSkills(
-    @Arg("workerId", () => String) workerId: string,
-    @Ctx() { req }: MyContext
-  ) {
+  async getSkills(@Arg("workerId", () => String) workerId: string) {
     const skills = await Skill.find({ where: { workerId: workerId } });
 
     if (!skills) {
@@ -359,7 +356,7 @@ export class SkillResolver {
         }
       }
     }
-    whereClause += ` AND "status" = 'Finished'`;
+
     if (orderBy == "rating") {
       orderClause += `"rating" DESC`;
     } else if (orderBy == "delivery time") {
@@ -371,7 +368,9 @@ export class SkillResolver {
     SELECT * from public.skill
     ${whereClause}
     ${orderClause}
+    LIMIT ${limit} OFFSET ${skip}
   `;
+
     // console.log("query", query);
     // console.log("remplacemets", replacements);
 

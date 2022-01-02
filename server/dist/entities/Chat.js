@@ -49,4 +49,4 @@ Chat = __decorate([
     (0, typeorm_1.Entity)({ synchronize: true })
 ], Chat);
 exports.Chat = Chat;
-//# sourceMappingURL=Chat.js.map
+//# sourceMappingURL=chat.js.map
